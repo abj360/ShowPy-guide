@@ -1947,7 +1947,7 @@ wheels = [
 [[package]]
 name = "showpy"
 version = "0.1.2.dev175+gf709f4975"
-source = { git = "https://github.com/abj360/ShowPy?rev=chore%2Fphase-0-safety-net#f709f49758fdfc6b3cea93d373e821ce689cc649" }
+source = { path = "vendor/showpy-0.1.2.dev175+gf709f4975-py3-none-any.whl" }
 dependencies = [
     { name = "imageio-ffmpeg" },
     { name = "numpy" },
@@ -1958,6 +1958,22 @@ dependencies = [
     { name = "scipy" },
     { name = "segno" },
     { name = "shapely" },
+]
+wheels = [
+    { filename = "showpy-0.1.2.dev175+gf709f4975-py3-none-any.whl", hash = "sha256:b61c46d38084b96186ea8a85197d9f01ed204f511c50095e34aba96d512fbb00" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "imageio-ffmpeg", specifier = ">=0.8.1" },
+    { name = "numpy", specifier = ">=2.5.4" },
+    { name = "pandas", specifier = ">=3.1.1" },
+    { name = "pillow", specifier = ">=13.0.0" },
+    { name = "pydantic", specifier = ">=2.14.3" },
+    { name = "pydantic-core", specifier = ">=2.50.4" },
+    { name = "scipy", specifier = ">=1.18.1" },
+    { name = "segno", specifier = ">=1.6.6" },
+    { name = "shapely", specifier = ">=2.2.0" },
 ]
 
 [[package]]
@@ -1993,7 +2009,7 @@ requires-dist = [
     { name = "numpy", specifier = "==2.5.4" },
     { name = "pillow", specifier = "==13.0.0" },
     { name = "pygments", specifier = "==2.21.0" },
-    { name = "showpy", git = "https://github.com/abj360/ShowPy?rev=chore%2Fphase-0-safety-net" },
+    { name = "showpy", path = "vendor/showpy-0.1.2.dev175+gf709f4975-py3-none-any.whl" },
     { name = "weasyprint", specifier = "==70.0" },
 ]
 

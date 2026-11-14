@@ -12,7 +12,7 @@ dependencies = [
     "numpy==2.5.4",
     "pillow==13.0.0",
     "pygments==2.21.0",
-    "showpy @ git+https://github.com/abj360/ShowPy@chore/phase-0-safety-net",
+    "showpy==0.1.2.dev175+gf709f4975",
     "weasyprint==70.0",
 ]
 
@@ -30,6 +30,9 @@ dev = [
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+showpy = { path = "vendor/showpy-0.1.2.dev175+gf709f4975-py3-none-any.whl" }
 
 [tool.ruff]
 line-length = 100
