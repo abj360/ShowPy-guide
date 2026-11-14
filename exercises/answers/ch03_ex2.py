@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+"""
+ch03_ex2.py --- reference answer to exercise 3.2: split counts exactly
+
+Contains:
+    solve(): returns 13 counts split into 4 parts
+"""
+
+from showpy.core.util import chunk_counts
+
+
+def solve() -> list[float]:
+    """Returns 13 counts split into 4 parts."""
+    return chunk_counts(13.0, 4)
