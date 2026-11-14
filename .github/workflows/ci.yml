@@ -1,0 +1,52 @@
+name: ci
+
+# ShowPy is a private repository, so this job needs a read-only token for it.
+# It runs on demand until the SHOWPY_READ_TOKEN secret exists; then add push and pull_request.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      UV_PYTHON: "3.14"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.12.9"
+          enable-cache: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - name: Grant read access to ShowPy
+        env:
+          SHOWPY_READ_TOKEN: ${{ secrets.SHOWPY_READ_TOKEN }}
+        run: |
+          test -n "$SHOWPY_READ_TOKEN" || { echo "E: SHOWPY_READ_TOKEN secret is not set"; exit 1; }
+          git config --global \
+            url."https://x-access-token:${SHOWPY_READ_TOKEN}@github.com/abj360/ShowPy".insteadOf \
+            "https://github.com/abj360/ShowPy"
+      - run: uv sync --locked
+      - run: uv run --locked ruff format --check .
+      - run: uv run --locked ruff check .
+      - run: uv run --locked mypy .
+      - run: npm ci --ignore-scripts
+      - run: npx --no-install prettier --check "**/*.{md,yml,yaml,json}"
+      - run: uv run --locked pytest
+      - name: Audit dependencies
+        run: |
+          uv export --format requirements-txt --no-emit-project --no-emit-package showpy \
+            --quiet --output-file "$RUNNER_TEMP/requirements.txt"
+          uv run --locked pip-audit --strict --disable-pip --require-hashes \
+            -r "$RUNNER_TEMP/requirements.txt"
