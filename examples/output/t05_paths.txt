@@ -1,0 +1,21 @@
+transition 1->2, 16 counts
+entity    style  start  end facing_mode  turn_counts
+    T1 straight    0.0 None   to_target          0.0
+    T2 straight    1.0 None   to_target          0.0
+    T3 straight    2.0 None   to_target          0.0
+    T4 straight    3.0 None   to_target          0.0
+    T5 straight    4.0 None   to_target          0.0
+    T6 straight    5.0 None   to_target          0.0
+    T7 straight    6.0 None   to_target          0.0
+    T8 straight    7.0 None   to_target          0.0
+transition 2->3, 16 counts
+entity  style  start  end facing_mode  turn_counts
+    F1 follow    0.0 None      travel          2.0
+    F2 follow    0.0 None      travel          2.0
+    F3 follow    0.0 None      travel          2.0
+    F4 follow    0.0 None      travel          2.0
+    T1  curve    0.0 None   to_target          0.0
+    T4  curve    0.0 None   to_target          0.0
+route members: ('F4', 'F3', 'F2', 'F1')
+route offsets: [12.0, 8.0, 4.0, 0.0] travel: 16.155
+F1 in set 3: (9.457, 26.305)

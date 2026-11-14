@@ -1,0 +1,16 @@
+set 1: count 0, 0.000 s
+set 2: count 16, 6.667 s
+set 3: count 32, 13.333 s
+T8 at count    0: (  8.000,  12.000)
+T8 at count    4: (  8.000,  12.000)
+T8 at count    8: (  7.887,  12.176)
+T8 at count   16: (  3.429,  19.143)
+count 24, 0:10.0, 144 cpm
+F1 at 24: position (2.078, 24.000), facing 90.00, velocity (1.010, 0.000)
+entity  distance  counts  m_per_count  m_per_s  max_instant
+    T8     8.480     9.0        0.942    2.261        1.826
+    T7     8.481    10.0        0.848    2.035        1.643
+    T6     8.481    11.0        0.771    1.850        1.494
+    T5     8.481    12.0        0.707    1.696        1.369
+T1 curve 2->3: 21 time-linear segments, first ends at count 1.0000
+T1 drawn path: 24 vertices

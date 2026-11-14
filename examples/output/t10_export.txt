@@ -1,0 +1,15 @@
+frame strip: tutorial_frames.png (1374, 852)
+video: True MP4 box b'ftyp'
+json schema: showpy.show.v1 round trip equal: True
+count,seconds,entity,x,y,facing,on_field
+0,0,T1,-8,12,0,true
+0,0,T2,-5.714286,12,0,true
+T4
+set  counts  cumulative  measure  position                                             x       y       facing  behavior          crossings           note
+1    0       0                    1.1 m left of center, 12.0 m upstage of front edge   -1.143  12      0       start
+2    16      16                   3.4 m right of center, 16.9 m upstage of front edge  3.429   16.857  0       delay 3, move 13  50, hash-front
+3    16      32                   9.9 m right of center, 15.9 m upstage of front edge  9.899   15.899  0       curve 16          hash-front, 45, 40
+Tutorial opener cue sheet
+count  seconds  measure  kind    label      detail
+16     6.66667           marker  block hit  rehearsal
+coordinate sheet PDF starts with b'%PDF-1.4'

@@ -1,0 +1,11 @@
+link: https://shows.example/p/opener-live status: live revision: 59fb6289d584
+claim: T1 Ada locked: True
+crew on a performer spot: ValidationError
+T1 is now: Bo | unclaimed: 10
+Ada's spot: T2
+  set 1 (0 counts): 5.71 m left of center, 12.00 m upstage of front edge
+  set 2 (16 counts): 1.14 m left of center, 16.86 m upstage of front edge
+  set 3 (16 counts): 7.45 m left of center, 17.85 m upstage of front edge
+claims kept on republish: 2
+notify Bo: path changed in 2→3
+notify Ada: path changed in 2→3

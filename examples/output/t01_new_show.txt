@@ -1,0 +1,5 @@
+sheet: sheet:hs-football@1, High school football field (NFHS)
+size: 109.728 m wide x 48.768 m deep
+sets: ['1'], first set counts: 0.0
+dependencies: {'sheet:hs-football': '1'}
+tempo: 144.0 cpm from count 0

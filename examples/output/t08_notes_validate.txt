@@ -1,0 +1,3 @@
+notes on set 2: ['Block locks in on count 16']
+notes near (0, 12) in set 1: [('n2', 'warning', 'agent')]
+valid: True issues: 0

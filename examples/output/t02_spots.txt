@@ -1,0 +1,16 @@
+spots: T1, T2, T3, T4, T5, T6, T7, T8, F1, F2, F3, F4
+ends: ('T1', 'T8')
+flag footprint radius: 0.65 m
+entity      x    y  facing  on_field
+    T1 -8.000 12.0     0.0      True
+    T2 -5.714 12.0     0.0      True
+    T3 -3.429 12.0     0.0      True
+    T4 -1.143 12.0     0.0      True
+    T5  1.143 12.0     0.0      True
+    T6  3.429 12.0     0.0      True
+    T7  5.714 12.0     0.0      True
+    T8  8.000 12.0     0.0      True
+    F1 -6.000 24.0     0.0      True
+    F2 -2.000 24.0     0.0      True
+    F3  2.000 24.0     0.0      True
+    F4  6.000 24.0     0.0      True

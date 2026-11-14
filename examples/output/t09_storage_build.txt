@@ -1,0 +1,10 @@
+saved revision 2c6ed88 with 11 documents
+conflict: 1 revision(s) landed on opener since 2c6ed88: designer slow the arc to 24 counts (/sets/3/set.json, /transitions/2-3/paths.json)
+hint: re-read at the head revision, reapply the edit and write again
+agent now reads fdbb757 set 3 counts 24.0
+valid before saving: True
+agent saved 3902800 changing ['/sets/3/forms.json', '/sets/3/set.json']
+T1 now at (-11.314, 17.314), form radius 16.0
+2c6ed88 2026-11-11 10:00 designer: create opener (11 paths)
+fdbb757 2026-11-11 10:01 designer: slow the arc to 24 counts (2 paths)
+3902800 2026-11-11 10:03 agent: widen the arc to 16 m (2 paths)
