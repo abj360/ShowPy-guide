@@ -237,8 +237,9 @@ Fewer than two distinct points cannot fix a rotation and a scale, so it raises
 >>> from showpy.sheet.replace import replace_sheet, similarity_fit
 >>> src = np.array([[0.0, 0.0], [10.0, 0.0], [0.0, 5.0]])
 >>> dst = src @ np.array([[0.0, 1.0], [-1.0, 0.0]]) * 2.0 + [3.0, 4.0]
->>> similarity_fit(src, dst).round(6).tolist()
-[[0.0, -2.0, 3.0], [2.0, 0.0, 4.0], [0.0, 0.0, 1.0]]
+>>> fit = similarity_fit(src, dst)
+>>> np.allclose(fit, [[0.0, -2.0, 3.0], [2.0, 0.0, 4.0], [0.0, 0.0, 1.0]], atol=1e-9)
+True
 >>> moved, report = replace_sheet(two_set_show(), blank_sheet(80, 40), "scale")
 >>> report.mapping, report.moved["T2"], moved.sheet.ref, moved.dependencies
 ('scale', ((2.0, 9.0), (4.0, 18.0)), 'sheet:blank-80x40@1', {'sheet:blank-80x40': '1'})
@@ -248,7 +249,8 @@ Traceback (most recent call last):
 showpy.core.errors.GeometryError: GEOMETRY: similarity fit needs at least two distinct matched points (hint: match two or more landmarks that are not on top of each other)
 ```
 
-The destination points were the source rotated 90°, scaled by 2 and shifted by `(3, 4)`;
+The fit is compared with `np.allclose` because its zero entries carry rounding noise near
+`1e-16`, whose sign depends on the machine. The destination points were the source rotated 90°, scaled by 2 and shifted by `(3, 4)`;
 the fit recovered exactly that matrix. In the `scale` example the 40 × 20 m test field went
 onto an 80 × 40 m sheet, so every coordinate doubled: T2 moved from `(2, 9)` to `(4, 18)`.
 The report also lists spots that land off the new sheet (`outside`) or in a restricted zone

@@ -105,7 +105,7 @@ angles is never more than 90°".
 ```pycon
 >>> from hypothesis import given, settings, strategies as st
 >>> from showpy.core.units import angle_diff
->>> @settings(derandomize=True, database=None, max_examples=200)
+>>> @settings(derandomize=True, database=None, max_examples=200, print_blob=False)
 ... @given(st.integers(-720, 720), st.integers(-720, 720))
 ... def test_turn_is_short(a, b):
 ...     assert abs(angle_diff(a, b)) <= 90.0
@@ -135,6 +135,7 @@ How to read it:
 
 `derandomize=True` makes the search deterministic, which is why this guide can print its
 output; the project's own property tests use normal random search plus the example database.
+`print_blob=False` leaves out the `@reproduce_failure` line Hypothesis adds on CI machines.
 Deterministic search is still a search: a rarer failure (such as only exactly 180°) can be
 missed in 200 examples, which is one reason to keep failures as `@example` cases.
 
