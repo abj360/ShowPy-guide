@@ -1,0 +1,319 @@
+@page {
+  size: A4;
+  margin: 22mm 19mm 20mm 19mm;
+  @top-right {
+    content: string(chapter);
+    font: 7.5pt "DejaVu Sans";
+    color: #777;
+  }
+  @bottom-center {
+    content: counter(page);
+    font: 8.5pt "DejaVu Sans";
+    color: #444;
+  }
+}
+
+@page :first {
+  @top-right {
+    content: none;
+  }
+  @bottom-center {
+    content: none;
+  }
+}
+
+html {
+  font-family: "DejaVu Serif", serif;
+  font-size: 9.6pt;
+  line-height: 1.42;
+  color: #1d1d1d;
+}
+
+body {
+  background: #fff;
+}
+
+.titlepage {
+  page: titlepage;
+  padding-top: 70mm;
+  page-break-after: always;
+}
+
+.titlepage .kicker {
+  font: bold 11pt "DejaVu Sans";
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #2c7fb8;
+}
+
+.titlepage .title {
+  font: bold 34pt "DejaVu Sans";
+  margin: 4mm 0;
+  border: none;
+}
+
+.titlepage .subtitle {
+  font: 14pt "DejaVu Sans";
+  color: #444;
+}
+
+.titlepage .edition {
+  margin-top: 30mm;
+  font: 10pt "DejaVu Sans";
+  color: #666;
+}
+
+.toc {
+  page-break-after: always;
+}
+
+.tochead {
+  font: bold 18pt "DejaVu Sans";
+  margin-bottom: 6mm;
+}
+
+.toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc li a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.toc li a::after {
+  content: leader(".") target-counter(attr(href), page);
+}
+
+.toc li.toc1 {
+  font: bold 10pt "DejaVu Sans";
+  margin-top: 3.2mm;
+}
+
+.toc li.toc2 {
+  font: 8.8pt "DejaVu Serif";
+  margin-left: 8mm;
+}
+
+.tocno {
+  display: inline-block;
+  min-width: 11mm;
+}
+
+.chapter {
+  page-break-before: always;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "DejaVu Sans", sans-serif;
+  page-break-after: avoid;
+  color: #111;
+}
+
+h1 .chaptitle {
+  string-set: chapter content(text);
+}
+
+h1 {
+  margin: 0 0 7mm 0;
+  padding-bottom: 3mm;
+  border-bottom: 1.5pt solid #2c7fb8;
+}
+
+h1 .chapno {
+  display: block;
+  font-size: 11pt;
+  color: #2c7fb8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 .chaptitle {
+  display: block;
+  font-size: 22pt;
+  margin-top: 2mm;
+}
+
+h2 {
+  font-size: 14pt;
+  margin: 7mm 0 2.5mm 0;
+}
+
+h3 {
+  font-size: 11.2pt;
+  margin: 5mm 0 2mm 0;
+}
+
+h4 {
+  font-size: 9.8pt;
+  margin: 4mm 0 1.2mm 0;
+  color: #1f4e79;
+}
+
+.secno {
+  color: #2c7fb8;
+  margin-right: 1.5mm;
+}
+
+p {
+  margin: 0 0 2.4mm 0;
+  text-align: left;
+  orphans: 3;
+  widows: 3;
+}
+
+ul,
+ol {
+  margin: 0 0 2.4mm 0;
+  padding-left: 6mm;
+}
+
+li {
+  margin-bottom: 0.8mm;
+}
+
+code {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 8.4pt;
+  background: #f1f1ec;
+  padding: 0 0.6mm;
+  border-radius: 1mm;
+}
+
+pre {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 7.7pt;
+  line-height: 1.32;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.code {
+  background: #f6f6f1;
+  border-left: 2.5pt solid #c4c4b4;
+  padding: 2mm 3mm;
+  margin: 0 0 3mm 0;
+  page-break-inside: auto;
+}
+
+.code pre code,
+pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+table {
+  border-collapse: collapse;
+  margin: 1mm 0 3.5mm 0;
+  font-size: 8.4pt;
+  width: 100%;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border-bottom: 0.5pt solid #cfcfc4;
+  padding: 1.1mm 1.6mm;
+  vertical-align: top;
+  text-align: left;
+}
+
+th {
+  font-family: "DejaVu Sans", sans-serif;
+  background: #eef3f8;
+  border-bottom: 1pt solid #9db4c8;
+}
+
+tr {
+  page-break-inside: avoid;
+}
+
+figure {
+  margin: 3mm 0 4.5mm 0;
+  page-break-inside: avoid;
+  text-align: center;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 120mm;
+}
+
+figcaption {
+  font: 8.4pt "DejaVu Sans";
+  color: #333;
+  margin-top: 1.5mm;
+  text-align: left;
+}
+
+blockquote {
+  margin: 2mm 0 3mm 0;
+  padding: 2mm 3.5mm;
+  border-left: 3pt solid #e6a23c;
+  background: #fdf7ec;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  color: #1f4e79;
+  text-decoration: none;
+}
+
+.snippet {
+  margin: 0 0 3.5mm 0;
+}
+
+.snippet .code {
+  margin: 0;
+}
+
+.output {
+  border-left: 2.5pt solid #2c7fb8;
+  background: #f2f7fb;
+  padding: 1.2mm 3mm 1.8mm 3mm;
+  margin: 0 0 1.5mm 0;
+}
+
+.output.error {
+  border-left-color: #c0392b;
+  background: #fbf1ef;
+}
+
+.output.quiet {
+  padding: 0.6mm 3mm;
+  background: #f7f7f7;
+  border-left-color: #cccccc;
+}
+
+.outlabel {
+  font: bold 6.8pt "DejaVu Sans";
+  color: #2c7fb8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6mm;
+}
+
+.output.error .outlabel {
+  color: #c0392b;
+}
+
+.output.quiet .outlabel {
+  color: #999999;
+  margin: 0;
+}
+
+.exercise {
+  border: 0.6pt solid #c9d6e2;
+  padding: 2mm 3mm;
+  margin: 2mm 0 3mm 0;
+}
