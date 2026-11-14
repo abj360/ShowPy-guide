@@ -1,8 +1,9 @@
 name: ci
 
-# ShowPy is a private repository, so this job needs a read-only token for it.
-# It runs on demand until the SHOWPY_READ_TOKEN secret exists; then add push and pull_request.
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -29,14 +30,9 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
-      - name: Grant read access to ShowPy
-        env:
-          SHOWPY_READ_TOKEN: ${{ secrets.SHOWPY_READ_TOKEN }}
-        run: |
-          test -n "$SHOWPY_READ_TOKEN" || { echo "E: SHOWPY_READ_TOKEN secret is not set"; exit 1; }
-          git config --global \
-            url."https://x-access-token:${SHOWPY_READ_TOKEN}@github.com/abj360/ShowPy".insteadOf \
-            "https://github.com/abj360/ShowPy"
+      - name: Verify the vendored showpy wheel
+        working-directory: vendor
+        run: sha256sum --check --strict SHA256SUMS
       - run: uv sync --locked
       - run: uv run --locked ruff format --check .
       - run: uv run --locked ruff check .
