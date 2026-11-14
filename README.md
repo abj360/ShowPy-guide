@@ -1,6 +1,6 @@
 # ShowPy study guide
 
-A 190-page study guide to [ShowPy](https://github.com/abj360/ShowPy), the Python choreography library (import name `showpy`). It teaches every package from first principles, with runnable snippets, an end-to-end tutorial, 65 graded exercises and a capstone project. One command rebuilds it into `showpy-guide.pdf`.
+A 190-page study guide to ShowPy, the Python choreography library (import name `showpy`). It teaches every package from first principles, with runnable snippets, an end-to-end tutorial, 65 graded exercises and a capstone project. One command rebuilds it into `showpy-guide.pdf`.
 
 ## Why
 
@@ -17,11 +17,20 @@ Documentation drifts the moment the code moves. This guide cannot: the build run
 ## Quickstart
 
 ```bash
-# No ports: the guide is a document. Needs read access to github.com/abj360/ShowPy.
+# No ports: the guide is a document.
 uv sync && uv run pytest
 ```
 
-ShowPy is installed from its `chore/phase-0-safety-net` branch, as pinned in `pyproject.toml`. To pin the release instead, set the dependency to `showpy @ git+https://github.com/abj360/ShowPy@v0.2.0` once that tag exists, then run `uv lock`.
+## The pinned library
+
+The guide is checked against one exact ShowPy build: the wheel in `vendor/`. `vendor/SHA256SUMS` holds its SHA-256, `uv.lock` records the same hash, and CI runs `sha256sum --check` before installing it. To move the guide to another ShowPy version, vendor a new wheel built from a branch or tag of the ShowPy repository:
+
+```bash
+scripts/refresh_wheel.sh <path-or-url-of-ShowPy-repository> <ref>
+uv sync && uv run pytest && uv run python build_guide.py
+```
+
+The script clones the ref with its tags, builds the wheel, replaces the one in `vendor/`, rewrites `SHA256SUMS`, points `pyproject.toml` at the new file and re-locks. Commit the wheel, the checksum, `pyproject.toml`, `uv.lock` and the rebuilt PDF together.
 
 ## Usage
 
@@ -61,6 +70,8 @@ exercises/            check_*.py, checklib.py, run_all_checks.py
   solutions_template/ stubs for the reader
 figures/              make_figures.py, the figures it draws, and snippets/ drawn by the build
 tests/integration/    pytest wrappers around examples, exercises and snippets
+vendor/               the pinned showpy wheel and its SHA256SUMS
+scripts/              refresh_wheel.sh, which vendors a new showpy wheel
 showpy-guide.pdf      the built guide
 ```
 
@@ -85,13 +96,13 @@ After editing a chapter, run `uv run python build_guide.py --update-snippets --o
 | `test_exercises.py` | every reference answer passes its check, and every stub fails it |
 | `test_snippets.py`  | every chapter's snippets print exactly what the chapter shows    |
 
-CI (`.github/workflows/ci.yml`) runs ruff, `mypy --strict`, Prettier, pytest and `pip-audit` on Ubuntu with Python 3.14. ShowPy is a private repository, so the job reads it with a fine-grained, read-only token stored as the `SHOWPY_READ_TOKEN` secret, and runs on demand from the Actions tab.
+CI (`.github/workflows/ci.yml`) runs ruff, `mypy --strict`, Prettier, pytest and `pip-audit` on Ubuntu with Python 3.14, on every push to `main` and every pull request. It verifies the vendored wheel's SHA-256 first and stops on a mismatch.
 
 ## Docs
 
 - `showpy-guide.pdf`: the guide.
 - `chapters/`: its Markdown sources.
-- [ShowPy](https://github.com/abj360/ShowPy): the library, its `docs/showpy-api-reference.md` and its ADRs in `docs/adr/`.
+- The ShowPy repository: the library, its `docs/showpy-api-reference.md` and its ADRs in `docs/adr/`.
 
 ## License
 
