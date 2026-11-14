@@ -1,0 +1,69 @@
+[project]
+name = "showpy-guide"
+version = "0.1.0"
+description = "Study guide to the ShowPy choreography library, built into a PDF."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "markdown==3.11.3",
+    "matplotlib==3.11.2",
+    "numpy==2.5.4",
+    "pillow==13.0.0",
+    "pygments==2.21.0",
+    "showpy @ git+https://github.com/abj360/ShowPy@chore/phase-0-safety-net",
+    "weasyprint==70.0",
+]
+
+[dependency-groups]
+dev = [
+    "hypothesis==6.170.15",
+    "mypy==2.4.1",
+    "pip-audit==2.10.1",
+    "pytest==9.2.0",
+    "pytest-timeout==2.4.0",
+    "ruff==0.17.5",
+    "types-markdown==3.11.3.20261108",
+    "types-pygments==2.21.0.20260819",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv"]
+src = [".", "examples", "exercises"]
+
+[tool.ruff.lint]
+allowed-confusables = ["–"]
+select = [
+    "E", "W", "F", "I", "B", "UP", "N", "SIM", "RUF", "C4", "D",
+    "EXE", "PIE", "PGH", "RSE", "ISC", "LOG", "DTZ", "PTH", "FURB", "PERF",
+]
+ignore = ["D105", "D107", "D104", "D200", "D212", "D401", "D413", "D415"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+strict = true
+python_version = "3.14"
+explicit_package_bases = true
+mypy_path = [".", "examples", "exercises"]
+
+# weasyprint ships no type information.
+[[tool.mypy.overrides]]
+module = ["weasyprint", "weasyprint.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --import-mode=importlib"
+filterwarnings = ["error"]
+timeout = 600

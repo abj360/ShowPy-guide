@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.env
+.claude/
+node_modules/
+.notes-report.md
