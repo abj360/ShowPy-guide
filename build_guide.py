@@ -21,7 +21,7 @@ Contains:
     execute_chapter(): runs every pycon block of a chapter and returns the results
     render_chapter(): turns one chapter's Markdown into numbered HTML
     build_pdf(): assembles the title page, contents and chapters and prints the PDF
-    main(): runs the whole build under a fixed hash seed
+    main(): runs the whole build
 """
 
 import argparse
@@ -47,7 +47,7 @@ CHECK_RUNNER = EXERCISES / "run_all_checks.py"
 PDF_PATH = GUIDE / "showpy-guide.pdf"
 TITLE = "ShowPy"
 SUBTITLE = "How the Python choreography library works, from first principles"
-EDITION = "2026-11-14"
+EDITION = "2026-11-18"
 SUBPROCESS_TIMEOUT_S = 900
 PYCON_BLOCK = re.compile(r"^```pycon\n(.*?)^```\n", re.DOTALL | re.MULTILINE)
 INCLUDE = re.compile(r"^\{\{(code|output|check): ([\w./-]+)\}\}$", re.MULTILINE)
@@ -57,8 +57,6 @@ FIGURE = re.compile(r'<p><img alt="(.*?)" src="(.*?)" ?/?></p>', re.DOTALL)
 TAG = re.compile(r"<[^>]+>")
 QUIET_BOX = '<div class="output quiet"><div class="outlabel">No printed output</div></div>'
 UNNUMBERED_PREFIXES = ("00-", "99-")
-HASH_SEED_VAR = "PYTHONHASHSEED"
-HASH_SEED = "0"
 APPENDIX_PREFIX = "99-"
 
 
@@ -401,11 +399,6 @@ def main() -> None:
     parser.add_argument("--only", default="", help="run only chapters whose name has this text")
     parser.add_argument("--no-pdf", action="store_true", help="stop before printing the PDF")
     args = parser.parse_args()
-    if os.environ.get(HASH_SEED_VAR) != HASH_SEED:
-        # Some ShowPy hashes still follow set order (its defect ledger, Priority 0 #9), so the
-        # build pins the hash seed to print the same revisions every run.
-        env = {**os.environ, HASH_SEED_VAR: HASH_SEED}
-        os.execve(sys.executable, [sys.executable, *sys.argv], env)
     sys.path[:0] = [str(GUIDE), str(EXAMPLES), str(EXERCISES)]
     if not args.skip_examples:
         run_examples()

@@ -13,12 +13,14 @@ from showpy.examples import two_set_show
 from showpy.export.models import Performer
 from showpy.export.publish import claim_spot, publish, swap_claims, who_is_on
 
+JOIN_TOKEN = "exercise-join-token-0123"
+
 
 def solve() -> tuple[str, str]:
     """Returns the names on T1 and T2 after the designer swaps them."""
     show = two_set_show()
     at = datetime(2026, 11, 12, 18, 0, tzinfo=UTC)
-    pub = publish(show, "p", "https://shows.example/p", at)
+    pub = publish(show, "p", "https://shows.example/p", at, join_token=JOIN_TOKEN)
     pub, _ = claim_spot(pub, show, Performer(id="ada", name="Ada"), "T1", at)
     pub, _ = claim_spot(pub, show, Performer(id="bo", name="Bo"), "T2", at)
     pub = swap_claims(pub, "T1", "T2")

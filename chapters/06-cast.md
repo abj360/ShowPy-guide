@@ -15,11 +15,13 @@ draws spots, manages groups and labels, and resolves selection expressions such 
   designer-made set of spots. `limits` holds per-group overrides that only a safety checker reads;
   `moves=False` marks a stationary group such as a pit.
 - `Spot(id, group, symbol, color, tags, active, shape, claimable)`: one dot for the whole
-  show. `symbol` and `color` of `None` inherit the group's. `active=False` leaves the spot out
+  show. `tags` is an ordered tuple (a set given to it is sorted, so the stored order never
+  depends on the hash seed). `symbol` and `color` of `None` inherit the group's. `active=False` leaves the spot out
   of forms and checks. `claimable` is `performer`, `crew` or `none`.
 - `LabelScheme(prefixes, start, pad)`: labeling rules. A group's prefix is
   `prefixes[group.key]` if present, else the group's own `label_prefix` (ADR 0001 fix 17).
-- `Cast(groups, spots, selections, label_scheme)`: everything together. `cast.spot(id)`
+- `Cast(groups, spots, selections, label_scheme)`: everything together; each named selection
+  is a tuple of spot IDs. `cast.spot(id)`
   raises `UnknownRefError` with close matches; `cast.ids()` lists IDs in creation order.
 
 ```pycon
@@ -51,7 +53,7 @@ everywhere it is mentioned.
 | `add_spots_along(show, curve, n, group, set_id)`                  | adds `n` spots evenly by arc length                                       |
 | `fill_spots(show, region, group, set_id, interval=None, n=None)`  | fills an area with a grid                                                 |
 | `duplicate_spots(show, sel, offset, set_id)`                      | copies spots shifted by `offset`, under new labels                        |
-| `delete_spots(show, sel, force=False)`                            | removes spots and every reference to them                                 |
+| `delete_spots(show, sel, *, force=False)`                         | removes spots and every reference to them                                 |
 | `regroup(show, sel, group)`                                       | moves spots to another group and relabels them; returns `(show, mapping)` |
 | `add_group(show, group)` / `edit_group(show, key, **changes)`     | adds or edits a group                                                     |
 | `remove_group(show, key, reassign_to=None)`                       | moves its spots first; returns `(show, mapping)`                          |
@@ -61,7 +63,9 @@ everywhere it is mentioned.
 
 How a new spot is placed: in sets before `set_id` it gets a placement with `on_field=False`
 at the same point, so it is invisible but has somewhere to walk from. From `set_id` on it is
-on the field at `point`. Its label is the **lowest free number** under the group's prefix.
+on the field at `point`. Its label is the **lowest free number** under the group's prefix. The
+four additions take a keyword-only `force`: a spot that would stand on the field in a pinned
+set raises `LockedError` without it.
 
 ```pycon
 >>> from showpy.cast.spots import add_group, add_spot, add_spots_along, delete_spots, regroup
@@ -99,7 +103,8 @@ least `n` lattice points fit, by bisection between a small and a large spacing
 More spacing means fewer points, so the count is monotone in the interval and bisection is
 safe.
 
-`delete_spots` refuses pinned placements, locked forms and locked paths unless `force=True`.
+`delete_spots` refuses pinned placements, locked forms and locked paths unless `force=True`,
+passed by keyword; a forced delete also drops the pins on the deleted spots.
 It also refuses to delete a spot that other spots face (`TOWARD_ENTITY`), raising
 `ValidationError`, because those facings would point at nothing.
 

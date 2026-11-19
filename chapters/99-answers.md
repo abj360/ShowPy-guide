@@ -36,7 +36,7 @@ Answers to every "Check your understanding" question, then a worked solution to 
 
 **7.a** Stage left. Stage directions are the performer's, facing the audience, so audience right is the performer's left.
 
-**7.b** A replacement sheet should move a show, not mirror it. Allowing `det(R) = -1` would let a least-squares fit flip the show left for right.
+**7.b** No rotation undoes a mirror, so the best rotation would fit mirrored points badly and pass the error on silently. Mirrored landmarks usually mean a wrong pairing; refusing makes the caller check it, and the hint names `mirror` for a deliberate flip.
 
 **8.a** Determinism: the same inputs must give the same note, so tests and replays match. The library never reads the clock.
 
@@ -58,7 +58,7 @@ Answers to every "Check your understanding" question, then a worked solution to 
 
 **12.c** Inside each step the smoothstep is exactly half done at the step's middle, and probes at every eighth of an 8-count window land on step edges and middles, where the eased position equals the linear one. Every probe sat on the line.
 
-**13.a** Derived stacks are deterministic, shared by every workspace of the same principal, survive restarts, and cannot drift from the history.
+**13.a** A revision holds no author, so ShowPy cannot tell which change was the user's; the host can. `revert` is deterministic and lands as an ordinary new head, so history is never rewritten and every workspace sees the undo.
 
 **13.b** The agent's save raises `ConflictError`, listing what landed. The agent should refresh, reload, reapply its edit and save again.
 

@@ -8,7 +8,7 @@ Contains:
     main(): prints the block's slots and the placed trumpets
 """
 
-from showpy.choreo.form_place import filled_forms, place
+from showpy.choreo.form_place import place
 from showpy.choreo.forms import block_form, slots
 from showpy.choreo.match_ops import with_set
 from showpy.show.changes import apply_change
@@ -28,9 +28,8 @@ def add_block_set(show: Show) -> Show:
     form = block_form(
         "block", TRUMPET_IDS, origin=(0.0, 18.0), rows=2, cols=4, interval=4 * STEP_8_TO_5
     )
-    placed = place(show, "2", [form])
+    placed, stored = place(show, "2", [form])
     show = with_set(show, placed)
-    stored = filled_forms(placed, [form])
     return apply_change(show, [FormOp(form=f) for f in stored])
 
 

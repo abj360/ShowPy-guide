@@ -4,7 +4,7 @@
 #
 # Usage: scripts/refresh_wheel.sh <showpy-repository> <ref>
 #   <showpy-repository>  a local path or clone URL of the ShowPy repository
-#   <ref>                a branch or tag to build, such as v0.2.0
+#   <ref>                a branch or tag to build, such as v0.3.0
 #
 # Clones the ref with its tags (the version comes from them), builds the wheel, replaces the
 # wheel in vendor/, rewrites vendor/SHA256SUMS, points pyproject.toml at the new file and

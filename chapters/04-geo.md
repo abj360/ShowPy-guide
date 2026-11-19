@@ -451,6 +451,9 @@ path text is kept and stays editable.
 `text_outline` uses the built-in single-stroke font `simplex` from `text.py`: each glyph is a
 few polylines on a 4 × 6 grid with an advance of 5. Stroke letters are better than filled
 outline fonts for drill, because spots spaced along a stroke read as the letter itself.
+`simplex` is one of five bundled single-line fonts (with `relief-singleline` and three Hershey
+fonts), and `showpy.choreo.forms.text_form` spreads an exact number of spots over the same
+strokes as an editable text form.
 
 ## Regions: regions.py
 

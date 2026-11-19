@@ -19,7 +19,7 @@ def solve() -> tuple[int, float]:
     """Returns (number of revisions, set 2 counts at the head)."""
     at = datetime(2026, 11, 11, 9, 0, tzinfo=UTC)
     repo = InMemoryRepository()
-    ws = open_workspace(repo, "demo", "designer")
-    save_show(ws, two_set_show(), at, "create")
-    save_show(ws, set_counts(load_show(ws), "2", 12.0), at, "slower")
+    ws = open_workspace(repo, "demo")
+    save_show(ws, two_set_show(), at)
+    save_show(ws, set_counts(load_show(ws), "2", 12.0), at)
     return len(repo.revisions("demo")), repo.get_show("demo").set("2").counts

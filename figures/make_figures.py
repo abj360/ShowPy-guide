@@ -16,7 +16,6 @@ import io
 import math
 from collections.abc import Callable
 from pathlib import Path
-from unittest import mock
 
 import matplotlib as mpl
 
@@ -24,7 +23,6 @@ mpl.use("Agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
-import showpy.choreo.engine as engine_module
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
@@ -83,6 +81,8 @@ BLUE, RED, GREEN, GREY, ORANGE, PURPLE = (
 )
 SERIES = (BLUE, RED, GREEN, ORANGE, PURPLE, GREY, "#17becf", "#8c564b")
 TICK = 0.45
+OLD_PROBE_SHARES = np.arange(1, 8) / 8
+OLD_PROBE_TOL_SHARE = 0.5
 
 
 def _style() -> None:
@@ -550,26 +550,49 @@ def facing_phases() -> None:
     _save(fig, "fig_facing_phases.png")
 
 
+def _probe_only_stations(engine: PathEngine, lo: float, hi: float, tol: float) -> list[float]:
+    """Replays the old subdivision: probes at every eighth, no easing breaks, no error bound.
+
+    Args:
+        engine: Engine that gives the true positions of T1 in transition 1->2.
+        lo: Local count where the interval starts.
+        hi: Local count where the interval ends.
+        tol: Segment tolerance in meters; probes had to stay within half of it.
+
+    Returns:
+        stations: Segment end counts after `lo`, up to and including `hi`.
+    """
+    times = np.concatenate([[lo, hi], lo + OLD_PROBE_SHARES * (hi - lo)])
+    pts = np.array([engine.position("T1", float(t), local=("1", "2")) for t in times])
+    linear = pts[0] + np.outer(OLD_PROBE_SHARES, pts[1] - pts[0])
+    if np.max(np.linalg.norm(pts[2:] - linear, axis=1)) <= tol * OLD_PROBE_TOL_SHARE:
+        return [hi]
+    mid = (lo + hi) / 2
+    return _probe_only_stations(engine, lo, mid, tol) + _probe_only_stations(engine, mid, hi, tol)
+
+
 def segments() -> None:
-    """Shows the aliasing bug that easing breaks fixed: steps easing, with and without breaks."""
+    """Shows the aliasing bug of probe-only subdivision next to the current segments."""
     row = PathRow(entity="T1", easing=Easing(kind="steps", strength=4))
-    show = with_rows({"T1": row})
+    engine = PathEngine(with_rows({"T1": row}))
     tau = np.linspace(0, 8, 801)
     fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.8), sharey=True)
-    true_y = [PathEngine(show).position("T1", t, local=("1", "2"))[1] for t in tau]
-    for ax, label, patch in (
-        (axes[0], "without easing breaks (the old bug)", True),
-        (axes[1], "with easing breaks (current)", False),
+    true_y = [engine.position("T1", t, local=("1", "2"))[1] for t in tau]
+    current = engine.entity_segments("T1", ("1", "2"), tol=0.02)
+    old_times = [0.0, *_probe_only_stations(engine, 0.0, 8.0, tol=0.02)]
+    old_y = [engine.position("T1", t, local=("1", "2"))[1] for t in old_times]
+    for ax, label, xs, ys in (
+        (axes[0], "probes only, no easing breaks (the old bug)", old_times, old_y),
+        (
+            axes[1],
+            "breaks and error bounds (current)",
+            [current[0].t0, *(s.t1 for s in current)],
+            [current[0].p0[1], *(s.p1[1] for s in current)],
+        ),
     ):
-        if patch:
-            with mock.patch.object(engine_module, "easing_breaks", return_value=[]):
-                segs = PathEngine(show).entity_segments("T1", ("1", "2"), tol=0.02)
-        else:
-            segs = PathEngine(show).entity_segments("T1", ("1", "2"), tol=0.02)
         ax.plot(tau, true_y, color=GREY, lw=3, alpha=0.5, label="true y(τ)")
-        xs = [segs[0].t0, *(s.t1 for s in segs)]
-        ys = [segs[0].p0[1], *(s.p1[1] for s in segs)]
-        ax.plot(xs, ys, "-o", color=RED, ms=3, lw=1, label=f"{len(segs)} segments")
+        count = len(xs) - 1
+        ax.plot(xs, ys, "-o", color=RED, ms=3, lw=1, label=f"{count} segment{'s' * (count != 1)}")
         ax.set_title(label, fontsize=8)
         ax.set_xlabel("local count τ")
         ax.legend(loc="upper left")

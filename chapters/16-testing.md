@@ -6,11 +6,11 @@ to run every gate, and how to read a failure, especially a Hypothesis failure.
 
 ## How the tests are organized
 
-On 2026-11-14, `uv run pytest --co -q` in the ShowPy repository collected 2,042 tests: 411
-doctests inside `showpy/`, 40 property tests, 1 golden test and 1,590 unit tests. 528 of them
-are open entries of the defect ledger (below), so about 1,500 tests pass on every run. Tests
-marked `slow` (generated-show properties and a 240-spot golden show) and `bench` (performance
-budgets) run in their own sessions.
+On 2026-11-18, `uv run pytest --co -q` at the ShowPy `v0.3.0` tag collected 3,357 tests: 491
+doctests inside `showpy/`, 45 property tests, 2 golden tests and 2,819 unit tests. 373 of them
+are open entries of the defect ledger (below), so about 2,980 tests pass on every run. Tests
+marked `slow` (generated-show properties and a 240-spot golden show), `bench` (performance
+budgets) and `fuzz` (hostile-input targets) run in their own sessions.
 
 | Kind           | Where                                                        | What it proves                                        |
 | -------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
@@ -23,7 +23,7 @@ budgets) run in their own sessions.
 
 `pyproject.toml` sets the pytest options: `--doctest-modules` (so docstrings run),
 `--strict-markers`, `--import-mode=importlib`, `testpaths = ["tests", "showpy"]`,
-`pythonpath = ["."]`, `-m 'not bench and not slow'`, and `filterwarnings = ["error"]`:
+`pythonpath = ["."]`, `-m 'not bench and not slow and not fuzz'`, and `filterwarnings = ["error"]`:
 **every warning fails the run**, so a deprecation cannot slip by.
 
 ### The defect ledger
@@ -32,7 +32,7 @@ Every audited defect that is not fixed yet is a test that reproduces it, marked
 `@pytest.mark.defect("UP-9.4-01")` and `@pytest.mark.xfail(strict=True, reason="UP-9.4-01")`.
 The test fails today, as expected. `strict=True` turns an unexpected pass into a failure, so
 the fix must also remove both markers. `tests/ledger_plugin.py` rejects a malformed marker and
-prints the number still open at the end of the run, for example `Ledger: 528 open`.
+prints the number still open at the end of the run, for example `Ledger: 373 open`.
 
 ### Unit tests
 
@@ -80,6 +80,7 @@ One task runner, `noxfile.py`, drives every gate, locally, in the pre-commit hoo
 | golden only                              | `uv run pytest -m golden`                                      |
 | other hash seeds                         | `uv run nox -s hashseeds`                                      |
 | slow tests                               | `uv run nox -s slow`                                           |
+| fuzz targets                             | `uv run nox -s fuzz`                                           |
 | lint, format, dependencies, Prettier     | `uv run nox -s lint`                                           |
 | types                                    | `uv run nox -s types` (`mypy --strict`, then pyright basic)    |
 | dependency audit                         | `uv run nox -s audit` (`pip-audit` on the locked requirements) |

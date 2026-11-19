@@ -1,8 +1,9 @@
 # showpy.show: the show, its storage and its history
 
 `showpy.show` holds the `Show` aggregate and everything that manages a whole show: adding and
-retiming sets, splitting a show into movements, storing it as versioned documents, undo and
-redo, live collaboration, pins and validation.
+retiming sets, splitting a show into movements, storing it as versioned documents, reverting to
+earlier revisions, live collaboration, pins and validation. Who saved a revision, why, and who
+may write at all are the host application's records and rules, not the library's.
 
 ## The Show and its index: models.py
 
@@ -125,7 +126,7 @@ two sections.
 >>> apply_change(pinned, [move])
 Traceback (most recent call last):
   ...
-showpy.core.errors.LockedError: LOCKED: edit touches pinned or locked items: placement T1 in set 2 (hint: leave pinned items as they are, ask the designer to unpin, or pass force=True as the designer)
+showpy.core.errors.LockedError: LOCKED: edit touches pinned or locked items: placement T1 in set 2 (hint: leave pinned items as they are, unpin them first, or pass force=True)
 >>> locked_changes(pinned, apply_change(pinned, [move], force=True))
 ['placement T1 in set 2']
 >>> unpin(pinned, "entity", "T1") == show
@@ -172,8 +173,10 @@ splits it:
 | `/sets/<id>/set.py`                    | the set's build script, stored as text (written with `ws.write`, not by encode)         |
 | `/transitions/<a>-<b>/paths.json`      | one transition's stored paths (only when not default)                                   |
 
-`dump_json` writes canonically: sorted keys, two-space indent, sets and frozensets sorted. So
-equal content always gives equal bytes and equal hashes. `decode_show(docs)` reassembles a
+`dump_json` writes canonically: sorted keys, two-space indent, sets sorted, `-0.0` written as
+`0.0`. So equal content always gives equal bytes. `content_hash` hashes values as RFC 8785
+canonical JSON under a domain tag (`showpy.content` by default), so equal content gives equal
+hashes on every machine and under every hash seed. `decode_show(docs)` reassembles a
 show; paths take the destination set's counts. `split_path` rejects `..`, `.`, `//` and `\`
 so no path can escape the workspace.
 
@@ -194,15 +197,17 @@ showpy.core.errors.StorageError: BAD_PATH: path '/sets/../config/limits.yaml' is
 A `Repository` versions each show's documents in a **linear history**. Each revision is a
 content-addressed tree: path → SHA-256 digest of the blob. Writing changes:
 
-1. `transaction(show_id, changes, expected_revision, actor, at, message)` takes the revision
-   the caller read at. If the head has moved, it raises `ConflictError` listing every revision
-   that landed since (actor, message, paths). This is **optimistic concurrency**:
-   compare-and-swap on the head, no locks held.
+1. `transaction(show_id, changes, *, expected_revision, at)` takes the revision the caller
+   read at. If the head has moved, it raises `ConflictError` listing every revision that
+   landed since (short ID, time, paths). This is **optimistic concurrency**: compare-and-swap
+   on the head, no locks held.
 2. It merges the changes into the old tree (bytes write, `None` deletes).
 3. If nothing differs, it returns the head unchanged: writes are idempotent.
-4. The revision ID is `content_hash` of the parent, time, actor, message, kind, target and
-   changed digests. Equal inputs give an equal ID: deterministic.
-5. The backend lands the revision only if its parent is still the head.
+4. The new tree must decode into a valid show, or the commit is refused.
+5. The revision ID is `content_hash` of the parent, time and changed digests. Equal inputs
+   give an equal ID: deterministic. A `Revision` holds only `id`, `parent`, `at` and
+   `changed`.
+6. The backend lands the revision only if its parent is still the head.
 
 `InMemoryRepository` keeps everything in memory. `FileRepository(root)` keeps one folder per
 show with JSON revisions, trees and content-addressed blob files; it writes atomically (temp
@@ -211,31 +216,31 @@ file plus `os.replace`), so two processes racing on one head cannot both land.
 
 ### Workspaces
 
-A `Workspace` exposes one show as files to one **principal** (`designer`, `system` or
-`agent`), like a working copy:
+A `Workspace` exposes one show as files, like a working copy:
 
 - It reads at its own revision. Writes expect that revision by default, so an edit made on a
-  stale view raises `ConflictError` instead of overwriting the designer. `refresh()` moves to
-  the head; each successful write moves to the revision it created.
+  stale view raises `ConflictError` instead of overwriting someone else's. `refresh()` moves
+  to the head; each successful write moves to the revision it created.
 - `ls(path)`, `read(path)`, `write(path, data, at=...)`, `commit(changes, at=...)`.
-- Agents may not write designer-owned files (`/config/limits.yaml`, `/config/waivers.yaml`,
-  `/canvas/selection.json`, `/publish/claims.json`) and may not change pins or pinned items:
-  every agent commit decodes the before and after shows and runs `require_unlocked`.
-- Derived files are computed on read: `/show/index.csv`, `/sets/<id>/placements.csv`.
+- It does not know who is writing. The host decides who may write which file (an agent and
+  the designer's limits, say) and refuses a write before it reaches ShowPy. Edit functions
+  still refuse pinned items unless the caller passes `force=True`.
+- Derived files are computed on read: `/show/index.csv`, `/sets/<id>/placements.csv`. A
+  write to one is refused (`READ_ONLY`).
 
 `files.py` holds the file view behind the workspace:
 
-| Function or constant                                                                                      | Does                                                                                                               |
-| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `all_files(show, tree)` / `directories(show, tree)`                                                       | every readable file path / every directory, each ending in `/`                                                     |
-| `read_file(path, show, tree)`                                                                             | text or bytes; derived tables are computed, missing designer files read as defaults                                |
-| `show_changes(show, tree)`                                                                                | the writes and deletes that store a show, including removed sets' files                                            |
-| `staged_changes(path, raw, show, tree)`                                                                   | validates one file write and returns the document changes it makes (writing `[]` to `forms.json` clears the forms) |
-| `INDEX_DOC`, `LIMITS_DOC`, `WAIVERS_DOC`, `SELECTION_DOC`, `COMMENTS_DOC`, `CLAIMS_DOC`, `DESIGNER_PATHS` | the fixed paths and which ones only the designer may write                                                         |
+| Function or constant                                   | Does                                                                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `all_files(show, tree)` / `directories(show, tree)`    | every readable file path / every directory, each ending in `/`                                                     |
+| `read_file(path, show, tree)`                          | text or bytes; derived tables are computed, missing designer files read as defaults                                |
+| `show_changes(show, tree)`                             | the writes and deletes that store a show, including removed sets' files                                            |
+| `staged_changes(path, raw, show, tree)`                | validates one file write and returns the document changes it makes (writing `[]` to `forms.json` clears the forms) |
+| `require_writable(path)`                               | refuses a write to a derived table with `LockedError` `READ_ONLY`                                                  |
+| `INDEX_DOC`, `LIMITS_DOC`, `WAIVERS_DOC`, `CLAIMS_DOC` | the fixed paths of the derived index and the designer's files                                                      |
 
-`open_workspace(repo, show_id, principal)`, `load_show(ws)` and `save_show(ws, show, at,
-message)` are the usual entry points. `save_show` writes against `show.revision`, the
-revision the show was loaded at.
+`open_workspace(repo, show_id)`, `load_show(ws)` and `save_show(ws, show, at)` are the usual
+entry points. `save_show` writes against `show.revision`, the revision the show was loaded at.
 
 ```pycon
 >>> from datetime import UTC, datetime
@@ -244,24 +249,25 @@ revision the show was loaded at.
 >>> from showpy.show.storage import load_show, open_workspace, save_show
 >>> at = datetime(2026, 11, 11, 9, 0, tzinfo=UTC)
 >>> repo = InMemoryRepository()
->>> designer = open_workspace(repo, "demo", "designer")
->>> first = save_show(designer, show, at, "create")
+>>> designer = open_workspace(repo, "demo")
+>>> first = save_show(designer, show, at)
 >>> first.parent, len(first.changed), first.id[:7]
-('', 7, 'd4b4cb3')
->>> agent = open_workspace(repo, "demo", "agent")
->>> save_show(designer, set_counts(load_show(designer), "3", 6.0), at, "retime 3").message
-'retime 3'
+('', 7, '0366592')
+>>> agent = open_workspace(repo, "demo")
+>>> retimed = save_show(designer, set_counts(load_show(designer), "3", 6.0), at)
+>>> retimed.changed
+('/sets/3/set.json',)
 >>> try:
-...     save_show(agent, load_show(agent), at, "stale edit")
+...     save_show(agent, load_show(agent), at)
 ... except ConflictError as error:
 ...     print(error.message)
-1 revision(s) landed on demo since d4b4cb3: designer retime 3 (/sets/3/set.json)
+1 revision(s) landed on demo since 0366592: 7976eeb 2026-11-11T09:00:00+00:00 (/sets/3/set.json)
 >>> agent.ls("/"), agent.ls("/sets/1")
 (['canvas/', 'config/', 'exports/', 'lib/', 'publish/', 'renders/', 'sets/', 'show/', 'time/', 'transitions/'], ['forms.json', 'placements.csv'])
->>> agent.write("/config/limits.yaml", "max_step_m: 2\n", at=at)
+>>> agent.write("/show/index.csv", "set,counts\n", at=at)
 Traceback (most recent call last):
   ...
-showpy.core.errors.LockedError: LOCKED: /config/limits.yaml belong to the designer (hint: read them, and ask the designer to change them)
+showpy.core.errors.LockedError: READ_ONLY: /show/index.csv is derived and read-only (hint: edit forms.json, set.py or paths instead; the table follows)
 ```
 
 ## History: history.py
@@ -271,35 +277,31 @@ showpy.core.errors.LockedError: LOCKED: /config/limits.yaml belong to the design
 | `diff_sets(a, b, tol)`           | spots moved, turned, added, removed; forms changed                               |
 | `diff_paths(a, b)`               | spots and routes whose effective paths differ (a missing row equals the default) |
 | `diff_show(a, b)`                | every difference between two shows as a JSON-safe dict                           |
-| `snapshot(ws, message, at)`      | an empty, named revision, like a tag                                             |
 | `revert(ws, revision_id, at)`    | saves an earlier revision's documents as a new head                              |
-| `undo(ws, at)` / `redo(ws, at)`  | reverse or reapply the principal's latest change                                 |
 | `rename_entities(show, mapping)` | rewrites spot IDs everywhere, swaps allowed                                      |
 | `changelog(ws, since)`           | terse lines, one per revision                                                    |
 
-**How undo works without hidden state.** The undo and redo stacks are not stored anywhere.
-`_stacks(log, actor)` derives them from the revision history each time: walk the principal's
-revisions in order; an `edit` or `revert` pushes onto the undo stack and clears redo; an
-`undo` revision moves its target from undo to redo; a `redo` moves it back. So every
-workspace of the same principal sees the same stacks, and they survive restarts. Undo then
-writes the target's parent documents back, but only if nobody changed those files since;
-otherwise `ConflictError`.
+**Undo belongs to the host.** A revision records what changed and when, not who changed it, so
+only the host knows which revisions its user made. The host keeps that record keyed by
+revision ID and builds undo on `revert(ws, revision_id, at)`: it saves the documents of the
+revision before the user's change as a new head. History is never rewritten, so every other
+workspace sees the undo as an ordinary revision, and a stale one meets `ConflictError` as
+usual.
 
 ```pycon
->>> from showpy.show.history import changelog, diff_sets, diff_show, undo
+>>> from showpy.show.history import changelog, diff_sets, diff_show, revert
 >>> diff_sets(show.set("1"), show.set("2")).moved
 ('T1', 'T2', 'T3', 'T4')
 >>> diff_show(show, show.model_copy(update={"title": "Opener"}))
 {'title': ['Test show', 'Opener']}
 >>> designer.refresh() == designer.revision
 True
->>> undone = undo(designer, at)
->>> undone.kind, load_show(designer).set("3").counts
-('undo', 4.0)
->>> print(changelog(designer))
-d4b4cb3 2026-11-11 09:00 designer: create (7 paths)
-64beb24 2026-11-11 09:00 designer: retime 3 (1 path)
-edf5c8e 2026-11-11 09:00 designer: undo 64beb24: retime 3 (1 path)
+>>> undone = revert(designer, first.id, at)
+>>> undone.parent == retimed.id, load_show(designer).set("3").counts
+(True, 4.0)
+>>> print(changelog(designer, first.id))
+7976eeb 2026-11-11 09:00 (/sets/3/set.json)
+522a8b9 2026-11-11 09:00 (/sets/3/set.json)
 ```
 
 ## Collaboration: collab.py
@@ -308,13 +310,14 @@ The canvas is shared by the designer and the agent.
 
 - `events_since(ws, revision)` derives `CanvasEvent`s (moves, form edits, path edits,
   retimes) from the revisions after `revision`, by comparing stored states. Replaying them
-  with `apply_event` reproduces each edit.
+  with `apply_event` reproduces each edit. An unpin event, or a pin event that replaces a
+  pin, needs `apply_event(..., force=True)`.
 - `propose(show, ops, note, proposal_id)` wraps ops as a `Proposal` against the show's
   revision, after checking they apply. `preview_proposal` computes the ghost placements and
   paths for the canvas, and lists pinned items the proposal would touch.
-- `accept(ws, proposal, at)` applies an open proposal as the designer. If the base moved, it
-  still lands when nothing it touches changed since; otherwise `ConflictError` names the
-  overlap. `reject(proposal, reason)` closes it.
+- `accept(ws, proposal, at)` applies an open proposal. If the base moved, it still lands
+  when nothing it touches changed since; otherwise `ConflictError` names the overlap.
+  `reject(proposal, reason)` closes it.
 - `highlight(target, ttl_s, at, event_id)` points the designer at something; it changes
   nothing. `selection(ws)` reads what the designer has selected. `pins(show)` lists locks.
 
@@ -325,14 +328,14 @@ The canvas is shared by the designer and the agent.
 >>> [p.entity for p in preview.placements["2"]], preview.blocked
 (['T1'], ())
 >>> before = designer.revision
->>> accept(designer, proposal, at).message
-'accept proposal p1: open the left side'
->>> [(e.actor, e.kind, e.payload["set_id"]) for e in events_since(designer, before)]
-[('designer', 'move', '2')]
+>>> accept(designer, proposal, at).changed
+('/sets/2/set.json',)
+>>> [(e.kind, e.payload["set_id"]) for e in events_since(designer, before)]
+[('move', '2')]
 ```
 
-> **Check your understanding 13.a.** Why are undo and redo stacks derived from history
-> instead of stored?
+> **Check your understanding 13.a.** Why does ShowPy offer `revert` but leave undo to the
+> host?
 >
 > **Check your understanding 13.b.** An agent loads the show, the designer saves, then the
 > agent saves. What happens, and what should the agent do?
@@ -342,14 +345,14 @@ The canvas is shared by the designer and the agent.
 **Exercise 13.1 (warm-up).** Insert a sub-set after set `1` of `two_set_show()` with 3 counts,
 then renumber. Return the final set IDs and counts as a list of pairs.
 
-**Exercise 13.2.** Save `two_set_show()` to an `InMemoryRepository` as the designer, retime
-set 2 to 12 counts with a second save, and return the number of revisions and set 2's counts
-read back from the head.
+**Exercise 13.2.** Save `two_set_show()` to an `InMemoryRepository`, retime set 2 to 12 counts
+with a second save, and return the number of revisions and set 2's counts read back from the
+head.
 
 **Exercise 13.3.** Pin `T2` (entity pin) in `two_set_show()` and return the names
 `locked_changes` reports after you force-move T2 in both sets.
 
-**Exercise 13.4 (harder).** Save `two_set_show()` to an `InMemoryRepository` as the designer.
-Then, from a second workspace opened as the `agent`, place T1–T4 of set 2 on a `line_form` on
-`y = 12` from `x = 0` to `x = 6`, store the form, and save. Return set 2's positions read back
-from the head and the paths the agent's revision changed.
+**Exercise 13.4 (harder).** Save `two_set_show()` to an `InMemoryRepository` from the
+designer's workspace. Then, from a second workspace for the agent, place T1–T4 of set 2 on a
+`line_form` on `y = 12` from `x = 0` to `x = 6`, store the form, and save. Return set 2's
+positions read back from the head and the paths the agent's revision changed.

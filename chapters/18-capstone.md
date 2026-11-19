@@ -31,8 +31,9 @@ uv run python exercises/check_capstone.py
 2. **Spots.** One group of 8 with `add_group` and `add_spots_along` on a line in set 1.
 3. **Sets 2–4.** For each, `add_set(show, id, 16)`, build a form with **open** slots, match
    the previous set's spots to the slots with `match`, put the members on the form in slot
-   order, `place` it, and store it with `apply_change([FormOp(...)])`. Use at least two kinds:
-   for example a block, an arc and a circle.
+   order, and `place` it. Store the set it returns with `with_set` and the filled form with
+   `apply_change([FormOp(...)])`. Use at least two kinds: for example a block, an arc and a
+   circle.
 4. **Paths.** Ease the first transition and curve two spots in the last one with
    `curve_path`; store each spec with `store_paths`.
 5. **Measure as you go.** After each set, print `min_gaps` and `speeds`. If a gap is tight,
@@ -58,7 +59,7 @@ Measured on the reference show:
 ...     gap = min_gaps(show, tid, top=1)[0]
 ...     peak = float(speeds(show, tid)["max_instant"].max())
 ...     print(f"{tid[0]}->{tid[1]}: tightest {gap.a}-{gap.b} {gap.gap:.3f} m, peak {peak:.3f} m/count")
-1->2: tightest B2-B3 0.742 m, peak 0.908 m/count
+1->2: tightest B2-B3 0.742 m, peak 0.879 m/count
 2->3: tightest B5-B7 1.375 m, peak 0.462 m/count
 3->4: tightest B2-B7 2.744 m, peak 0.751 m/count
 >>> from guide_draw import sketch
@@ -75,7 +76,7 @@ Why it passes:
   most crossings, so footprints never meet.
 - **16 counts** per transition keep the longest move (about 13 m from the line to the block,
   eased) under the speed limit; `ease_in_out` raises the peak above the mean, which is why the
-  first transition is the fastest at 0.908 m per count.
+  first transition is the fastest at 0.879 m per count.
 - **The curves** in the last transition swing B1 and B8 outward, away from the ring's other
   members.
 

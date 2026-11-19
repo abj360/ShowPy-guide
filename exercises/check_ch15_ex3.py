@@ -15,7 +15,7 @@ from checklib import expect, run
 def check(solution: ModuleType) -> None:
     """Tests the solution to exercise 15.3."""
     got = solution.solve()
-    expect(got > -0.467, f"tightest gap {got:.3f} m is not better than the original -0.467 m")
+    expect(got > -0.463, f"tightest gap {got:.3f} m is not better than the original -0.463 m")
 
 
 if __name__ == "__main__":

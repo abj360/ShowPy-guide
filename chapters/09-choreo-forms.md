@@ -328,20 +328,22 @@ middle point; its largest perpendicular residual is 0.032 m.
    every slot needs a member.
 4. Pinned placements stay where they are.
 5. Each placement records `form` and `order`; the set lists the form IDs.
+6. It returns `(placed, forms)`: the set, and the forms in the order given with their members
+   filled in slot order. The show is not changed; store both, the set with `with_set` and the
+   forms with a `FormOp`, so forms and placements agree.
 
-`filled_forms(placed, forms)` reads the members back from a placed set in slot order, which
-is how you store the matched members on the forms. `rebuild(show, form_id)` regenerates one
-stored form's placements in its set and drops its members' stored path rows into and out of
-that set, so they walk straight.
+`filled_forms(placed, forms)` reads the members back from any placed set in slot order; `place`
+already returns them. `rebuild(show, form_id)` regenerates one stored form's placements in its
+set and drops its members' stored path rows into and out of that set, so they walk straight.
 
 ```pycon
 >>> from showpy.choreo.form_place import filled_forms, place, rebuild
 >>> open_row = line_form("row", [], (6, 12), (0, 12), n=4)
->>> placed = place(show, "2", [open_row])
+>>> placed, (filled,) = place(show, "2", [open_row])
 >>> [(p.entity, p.x, p.order) for p in placed.placements]
 [('T1', 0.0, 3), ('T2', 2.0, 2), ('T3', 4.0, 1), ('T4', 6.0, 0)]
->>> filled_forms(placed, [open_row])[0].members
-('T4', 'T3', 'T2', 'T1')
+>>> filled.members, filled.set, filled_forms(placed, [open_row]) == [filled]
+(('T4', 'T3', 'T2', 'T1'), '2', True)
 >>> sketch.moves(
 ...     show.set("1").positions(),
 ...     placed.positions(),
@@ -372,8 +374,8 @@ facing 180°. Return the slot index of the front-left slot in stage coordinates 
 then smallest x).
 
 **Exercise 9.3.** In `two_set_show()`, place set 2 from an arc form with 4 open slots
-(center `(3, 3)`, radius 6, start 150°, sweep -120°). Return the members read back with
-`filled_forms`.
+(center `(3, 3)`, radius 6, start 150°, sweep -120°). Return the members of the filled form
+that `place` returns.
 
 **Exercise 9.4 (harder).** Points on a circle of radius 7 around `(1, 2)` at angles 0°, 50°,
 95°, 160° and 200° (uneven). Return `detect_form(...)`'s kind, center, radius and sweep.

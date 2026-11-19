@@ -1,4 +1,6 @@
-link: https://shows.example/p/opener-live status: live revision: 59fb6289d584
+link: https://shows.example/p/opener-live status: live revision: 15db747b097c
+join link: https://shows.example/p/opener-live?t=tutorial-join-token-2026
+guessed token opens it: False
 claim: T1 Ada locked: True
 crew on a performer spot: ValidationError
 T1 is now: Bo | unclaimed: 10

@@ -9,23 +9,17 @@ Contains:
     main(): runs each check twice and exits non-zero on any surprise
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TIMEOUT_S = 300
-# Some ShowPy hashes still follow set order (its defect ledger, Priority 0 #9).
-FIXED_HASH_SEED = {"PYTHONHASHSEED": "0"}
 
 
 def _passes(script: Path, answers: bool) -> bool:
     args = [sys.executable, str(script), *(["--answers"] if answers else [])]
-    env = {**os.environ, **FIXED_HASH_SEED}
-    done = subprocess.run(
-        args, capture_output=True, text=True, timeout=TIMEOUT_S, check=False, env=env
-    )
+    done = subprocess.run(args, capture_output=True, text=True, timeout=TIMEOUT_S, check=False)
     return done.returncode == 0 and done.stdout.startswith("PASS")
 
 
