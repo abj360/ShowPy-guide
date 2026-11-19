@@ -118,7 +118,7 @@ no package imports a package above it.
 >>> showpy.PathEngine.__module__
 'showpy.choreo.engine'
 >>> len(showpy.__all__)
-519
+564
 ```
 
 Under the hood: `import showpy` runs only `showpy/__init__.py`. That file holds a table from

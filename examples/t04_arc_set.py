@@ -9,7 +9,7 @@ Contains:
     main(): prints how the matching objectives differ and the final assignment
 """
 
-from showpy.choreo.form_place import filled_forms, place
+from showpy.choreo.form_place import place
 from showpy.choreo.forms import arc_form, slots
 from showpy.choreo.match import match, match_by_order
 from showpy.choreo.match_ops import with_set
@@ -48,9 +48,9 @@ def add_arc_set(show: Show) -> Show:
     best = compare_objectives(show)["bottleneck_then_sum"]
     members = tuple(sorted(best.assignment, key=best.assignment.__getitem__))
     form = empty_arc().model_copy(update={"members": members})
-    placed = place(show, "3", [form])
+    placed, stored = place(show, "3", [form])
     show = with_set(show, placed)
-    return apply_change(show, [FormOp(form=f) for f in filled_forms(placed, [form])])
+    return apply_change(show, [FormOp(form=f) for f in stored])
 
 
 def main() -> None:

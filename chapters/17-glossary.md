@@ -36,9 +36,8 @@
 | Path row         | `PathRow`: one spot's instructions for one transition. Rows are sparse.                                                              |
 | Pin              | The designer's lock on a spot, form, set or transition. Edits need `force=True`.                                                     |
 | Placement        | One spot's state in one set: position, facing, form, order, pin, on-field.                                                           |
-| Principal        | Who works in a workspace: `designer`, `system` or `agent`.                                                                           |
 | Publication      | A published revision of a show plus its claims.                                                                                      |
-| Revision         | One saved state in a repository; its ID hashes its parent and its change.                                                            |
+| Revision         | One saved state in a repository: ID, parent, time and changed paths. Who saved it, and why, is the host's record.                    |
 | Route            | A shared curve that a file follows, leader first.                                                                                    |
 | Segment          | A piece of motion linear in both space and time, within a tolerance, for exact collision checks.                                     |
 | Selection        | An ordered, duplicate-free set of spot IDs.                                                                                          |
@@ -49,7 +48,7 @@
 | Tempo section    | Counts per minute from a count on, optionally ramping linearly.                                                                      |
 | Transition       | The movement between two consecutive sets, written `a→b`.                                                                            |
 | Waiver           | A designer-approved exception to a checker finding.                                                                                  |
-| Workspace        | One show exposed as files to one principal at one revision.                                                                          |
+| Workspace        | One show exposed as files at one revision, like a working copy.                                                                      |
 | Zone             | An area with rules on a sheet or show, optionally active in count windows.                                                           |
 
 ## Where is X?
@@ -84,7 +83,7 @@
 | find a landmark                      | `showpy.sheet.bounds`         | `landmark`, `nearest_landmarks`                          |
 | word a position                      | `showpy.sheet.coords`         | `to_coords`, `from_coords`                               |
 | draw a sheet                         | `showpy.sheet.render`         | `render_sheet`, `SheetCanvas`, `draw_sheet`              |
-| move a show to another sheet         | `showpy.sheet.replace`        | `replace_sheet`                                          |
+| fit matched landmarks                | `showpy.sheet.replace`        | `similarity_fit`                                         |
 | add notes                            | `showpy.notes.notes`          | `add_note`, `notes_for`, `notes_near`, `accept_draft`    |
 | build a form                         | `showpy.choreo.forms`         | `line_form`, `arc_form`, `block_form`, ...               |
 | get slots and facings                | `showpy.choreo.forms`         | `slots`, `slot_poses`, `placements`                      |
@@ -110,7 +109,7 @@
 | validate structure                   | `showpy.show.validate`        | `validate_show`                                          |
 | save and load                        | `showpy.show.storage`         | `open_workspace`, `load_show`, `save_show`               |
 | keep history on disk                 | `showpy.show.file_repository` | `FileRepository`                                         |
-| undo, redo, diff                     | `showpy.show.history`         | `undo`, `redo`, `diff_show`, `changelog`                 |
+| revert, diff                         | `showpy.show.history`         | `revert`, `diff_show`, `changelog`                       |
 | propose and accept edits             | `showpy.show.collab`          | `propose`, `preview_proposal`, `accept`                  |
 | print coordinate sheets              | `showpy.export.print_sheets`  | `coordinate_sheet`, `chart`, `cue_sheet`                 |
 | make a PDF                           | `showpy.export.pdf`           | `to_pdf`                                                 |

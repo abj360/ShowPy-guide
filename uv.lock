@@ -1946,8 +1946,8 @@ wheels = [
 
 [[package]]
 name = "showpy"
-version = "0.2.0"
-source = { path = "vendor/showpy-0.2.0-py3-none-any.whl" }
+version = "0.3.0"
+source = { path = "vendor/showpy-0.3.0-py3-none-any.whl" }
 dependencies = [
     { name = "imageio-ffmpeg" },
     { name = "numpy" },
@@ -1960,7 +1960,7 @@ dependencies = [
     { name = "shapely" },
 ]
 wheels = [
-    { filename = "showpy-0.2.0-py3-none-any.whl", hash = "sha256:0b026d6f55a44d596ecf0d9ff801d51f82944424751f708cbf35c2145e844e4c" },
+    { filename = "showpy-0.3.0-py3-none-any.whl", hash = "sha256:1f2d1c26bb06f232e4e7fc0b89c6cc40ac523984e4a68dca0156508ff552c176" },
 ]
 
 [package.metadata]
@@ -2009,7 +2009,7 @@ requires-dist = [
     { name = "numpy", specifier = "==2.5.4" },
     { name = "pillow", specifier = "==13.0.0" },
     { name = "pygments", specifier = "==2.21.0" },
-    { name = "showpy", path = "vendor/showpy-0.2.0-py3-none-any.whl" },
+    { name = "showpy", path = "vendor/showpy-0.3.0-py3-none-any.whl" },
     { name = "weasyprint", specifier = "==70.0" },
 ]
 

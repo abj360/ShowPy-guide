@@ -2,19 +2,18 @@
 
 A **sheet** is the 2D surface a show is drawn on: a football field, a proscenium stage, a gym
 floor, or a plain rectangle. `showpy.sheet` builds the templates, looks things up on them,
-words positions for people, draws sheets as images, and moves a show onto a different sheet.
+words positions for people, draws sheets as images, and fits matched points between frames.
 
 ## The data: models.py
 
-| Class                | Holds                                                                                                                                                                        |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Sheet`              | `ref`, `name`, `surface_type`, `size_m`, `outline`, `walkable` (a `Region`), `guides`, `landmarks`, `zones`, `grid`, `default_coordinates`, `based_on`, `owner`, `thumbnail` |
-| `Grid`               | background grid: `origin`, `spacing`, `major_every`, `rotation_deg`, `unit_name`                                                                                             |
-| `GuideLine`          | a drawn line: `id`, `kind` (`yard`, `hash`, `sideline`, `center`, `edge`, `spike`, `custom`), `points`, `label`                                                              |
-| `Landmark`           | a named reference: `point` (1 point), `line` (2+) or `area` (3+); `aliases`                                                                                                  |
-| `Zone`               | an area with rules: `kind` (`restricted`, `pit`, `wings`, `staging`, `audience`, `safety`, `custom`), `polygon`, `applies_to`, `active` count windows                        |
-| `CoordinateSystem`   | how positions are worded: `kind`, `origin`, `audience_side`, `units`, `precision`, `labels`                                                                                  |
-| `SheetReplaceReport` | what moved when a sheet was replaced                                                                                                                                         |
+| Class              | Holds                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Sheet`            | `ref`, `name`, `surface_type`, `size_m`, `outline`, `walkable` (a `Region`), `guides`, `landmarks`, `zones`, `grid`, `default_coordinates`, `based_on`, `owner`, `thumbnail` |
+| `Grid`             | background grid: `origin`, `spacing`, `major_every`, `rotation_deg`, `unit_name`                                                                                             |
+| `GuideLine`        | a drawn line: `id`, `kind` (`yard`, `hash`, `sideline`, `center`, `edge`, `spike`, `custom`), `points`, `label`                                                              |
+| `Landmark`         | a named reference: `point` (1 point), `line` (2+) or `area` (3+); `aliases`                                                                                                  |
+| `Zone`             | an area with rules: `kind` (`restricted`, `pit`, `wings`, `staging`, `audience`, `safety`, `custom`), `polygon`, `applies_to`, `active` count windows                        |
+| `CoordinateSystem` | how positions are worded: `kind`, `origin`, `audience_side`, `units`, `precision`, `labels`                                                                                  |
 
 `Zone.is_active(t)` is true when `active` is `None` (always) or `t` falls in one of its
 `(start, end)` windows. A `CoordinateSystem` is **display only**: changing it changes labels,
@@ -201,23 +200,45 @@ showpy.core.errors.SchemaError: SCHEMA: unknown sheet format 'gif' (hint: use sv
 The 10 × 6 m sheet plus a 1 m margin is 12 × 8 m, 120 × 80 px at 10 px/m. The origin, the
 front-center, is 60 px from the left and 70 px down: 1 m of margin above the bottom edge.
 
-## Replacing a sheet: replace.py
+## One sheet per show: replace.py
 
-`replace_sheet(show, sheet, mapping, force)` moves a whole show onto another sheet. It fits
-**one** affine map and applies it to placements (with facings), form curves, path waypoints,
-pivots, facing targets, route curves and show zones. It returns `(show, report)`. It does not
-run checks; the caller runs its own safety checker afterwards (ADR 0001 fix 22).
+A show keeps the sheet it was created on: every set is on `Show.sheet`, and no function swaps
+it. Drill written for one field is designed for that field; carrying it to another is a new
+design, not an edit. A high-school hash and an NFL hash share a name but not a distance, so an
+automatic move would shift spots without a word. Zones, landmarks and the coordinate display
+stay editable, because they belong to the same field and never move stored positions.
 
-Three mappings:
+To carry drill to another sheet, make a new show on that sheet and place the old forms in it
+with `place` (chapter 9). A form is plain data; which spot of the new cast fills each member is
+the designer's call, so ShowPy has no copy helper.
 
-- `landmarks`: fit a similarity to the point landmarks the two sheets share by name or alias.
-  With fewer than two shared landmarks it falls back to `origin`.
-- `origin`: keep coordinates as they are.
-- `scale`: scale x and y by the ratio of sheet sizes.
+```pycon
+>>> from showpy.cast.spots import add_group, add_spots_along
+>>> from showpy.choreo.form_place import place
+>>> from showpy.choreo.forms import line_form
+>>> from showpy.geo.shapes import line
+>>> from showpy.show.manage import add_set, new_show
+>>> old = two_set_show()
+>>> big = new_show("big-floor", "Same drill, bigger floor", blank_sheet(80, 40), old.timeline)
+>>> big = add_group(big, old.cast.groups["trumpets"])
+>>> big = add_spots_along(big, line((-6.0, 10.0), (6.0, 10.0)), 4, "trumpets", "1")
+>>> big = add_set(big, "2", 8.0)
+>>> row = line_form("row", ["T1", "T2", "T3", "T4"], (0.0, 18.0), (12.0, 18.0))
+>>> placed, (filled,) = place(big, "2", [row])
+>>> big.sheet.ref, [(p.entity, p.x, p.y) for p in placed.placements]
+('sheet:blank-80x40@1', [('T1', 0.0, 18.0), ('T2', 4.0, 18.0), ('T3', 8.0, 18.0), ('T4', 12.0, 18.0)])
+```
+
+The new show is a design of its own: its sheet is the 80 × 40 m floor, and the four trumpets
+stood on the row's slots in member order.
+
+`replace.py` keeps one function, `similarity_fit(src, dst)`: a general least-squares fit
+between matched points, for example landmarks measured on a photo of the field and the same
+landmarks on the sheet.
 
 ### The least-squares similarity fit (Umeyama)
 
-Given matched points `x_i` (old sheet) and `y_i` (new sheet), find the rotation `R`, uniform
+Given matched points `x_i` (one frame) and `y_i` (the other), find the rotation `R`, uniform
 scale `s` and translation `t` that minimize `Σ |s·R·x_i + t - y_i|²`. Umeyama (1991) gives a
 closed form; `similarity_fit` implements it line by line:
 
@@ -225,42 +246,43 @@ closed form; `similarity_fit` implements it line by line:
    `σ² = mean |x_i - x̄|²`.
 2. Covariance: `Σ = (1/n)·Σ (y_i - ȳ)(x_i - x̄)ᵀ`, a 2 × 2 matrix.
 3. Singular value decomposition: `Σ = U·D·Vᵀ`.
-4. `S = diag(1, ±1)`, with `-1` only when `det(U)·det(V) < 0`. This forbids a reflection,
-   so the fit never mirrors the show.
+4. `S = diag(1, ±1)`, with `-1` only when `det(U)·det(V) < 0`, which means the points are
+   mirrored. A mirrored fit is refused (`REFLECTION`) unless the smaller singular value is
+   below `1e-9` of the larger: collinear points have no handedness, so they still fit.
 5. `R = U·S·Vᵀ`, `s = trace(D·S)/σ²`, `t = ȳ - s·R·x̄`.
 
-Fewer than two distinct points cannot fix a rotation and a scale, so it raises
-`GeometryError`.
+It raises `GeometryError` for arrays of the wrong shape, fewer than two rows, NaN or infinite
+coordinates, points on top of each other on either side (`DEGENERATE`), or a mirror.
 
 ```pycon
 >>> import numpy as np
->>> from showpy.sheet.replace import replace_sheet, similarity_fit
+>>> from showpy.sheet.replace import similarity_fit
 >>> src = np.array([[0.0, 0.0], [10.0, 0.0], [0.0, 5.0]])
 >>> dst = src @ np.array([[0.0, 1.0], [-1.0, 0.0]]) * 2.0 + [3.0, 4.0]
 >>> fit = similarity_fit(src, dst)
 >>> np.allclose(fit, [[0.0, -2.0, 3.0], [2.0, 0.0, 4.0], [0.0, 0.0, 1.0]], atol=1e-9)
 True
->>> moved, report = replace_sheet(two_set_show(), blank_sheet(80, 40), "scale")
->>> report.mapping, report.moved["T2"], moved.sheet.ref, moved.dependencies
-('scale', ((2.0, 9.0), (4.0, 18.0)), 'sheet:blank-80x40@1', {'sheet:blank-80x40': '1'})
+>>> similarity_fit(src, src * [-1.0, 1.0])
+Traceback (most recent call last):
+  ...
+showpy.core.errors.GeometryError: REFLECTION: landmarks are mirrored between the sheets (hint: similarity fits keep handedness; check the landmark pairing; to fit a deliberate mirror, reflect one set first with showpy.geo.transforms.mirror)
 >>> similarity_fit(np.array([[1.0, 1.0], [1.0, 1.0]]), np.array([[0.0, 0.0], [1.0, 1.0]]))
 Traceback (most recent call last):
   ...
-showpy.core.errors.GeometryError: GEOMETRY: similarity fit needs at least two distinct matched points (hint: match two or more landmarks that are not on top of each other)
+showpy.core.errors.GeometryError: DEGENERATE: src landmarks sit on top of each other (hint: match two or more landmarks that are not on top of each other)
 ```
 
 The fit is compared with `np.allclose` because its zero entries carry rounding noise near
-`1e-16`, whose sign depends on the machine. The destination points were the source rotated 90°, scaled by 2 and shifted by `(3, 4)`;
-the fit recovered exactly that matrix. In the `scale` example the 40 × 20 m test field went
-onto an 80 × 40 m sheet, so every coordinate doubled: T2 moved from `(2, 9)` to `(4, 18)`.
-The report also lists spots that land off the new sheet (`outside`) or in a restricted zone
-(`in_zones`), and form recipes it changed (`form_notes`). The show's sheet dependency is
-re-pinned to the new sheet's version.
+`1e-16`, whose sign depends on the machine. The destination points were the source rotated
+90°, scaled by 2 and shifted by `(3, 4)`; the fit recovered exactly that matrix. Flipping x
+mirrored the points, and no rotation undoes a mirror, so the fit refused instead of returning a
+poor match.
 
 > **Check your understanding 7.a.** On the proscenium stage, a performer at `x = +3` is on
 > which side in `showpy` wording, and why?
 >
-> **Check your understanding 7.b.** Why does `similarity_fit` force `det(R) = +1`?
+> **Check your understanding 7.b.** Why does `similarity_fit` refuse mirrored points instead of
+> returning the best rotation?
 
 ## Exercises
 

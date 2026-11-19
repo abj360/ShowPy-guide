@@ -72,8 +72,9 @@ usable later as `sel:ends`.
 but not form membership). `block_form` stored a recipe, not dots: origin `(0, 18)`, 2 rows,
 4 columns, 2.286 m apart (four 8-to-5 steps). `place` generated the 8 slots front row first,
 left to right, stood member `i` on slot `i`, and recorded `form="block"` and `order` on each
-placement. `filled_forms` read the members back so `apply_change([FormOp(...)])` could store
-the form on the show and list it in set 2's `forms`.
+placement. `place` returned the placed set together with the forms, members filled, so
+`with_set` stored the set and `apply_change([FormOp(...)])` stored the form on the show and
+listed it in set 2's `forms`.
 
 ```pycon
 >>> from t03_block_set import add_block_set
@@ -169,7 +170,7 @@ Read the output with chapter 12 in mind:
 - F1 at count 24 faces 90° (audience right) because its route runs along `+x` there and its
   facing mode is `TRAVEL`.
 - `speeds` ranks T8 first: it covers 8.48 m in 9 counts, a mean of 0.942 m per count, and its
-  peak is 1.826 m per count in the middle of its eased move.
+  peak is 1.767 m per count in the middle of its eased move.
 - T1's curved path needed 21 time-linear segments to stay within 2 cm.
 
 ```pycon
@@ -198,7 +199,7 @@ The stagger has a cost: in transition 1→2 the trumpets' paths cross while some
 waiting, and footprints overlap (negative gaps). `min_gaps` used exact closest approach on the
 engine's segments. `suggest_delays` tried delaying either spot in 0.5-count steps and
 re-measured each trial with a fresh engine: delaying T4 by 4 more counts opens the pair to
-1.266 m, at the price of a faster peak (1.436 m per count).
+1.262 m, at the price of a faster peak (1.390 m per count).
 
 The last line is the lesson: fixing one pair moved the problem. T3 and T5 still overlap. The
 helpers are advice; the designer decides, and a safety checker has the final word. A better fix
@@ -234,19 +235,23 @@ the overlaps of step 7: collisions are the checker's job, not validation's.
 
 What happened, in order:
 
-1. The designer saved the show: 11 documents in one revision, `2c6ed88`.
+1. The designer saved the show: 11 documents in one revision, `d7284d4`.
 2. The agent opened a workspace at that revision. The designer then retimed set 3 to 24
    counts (with `rescale=True`, so the stored path windows stretched too).
 3. The agent tried to save its stale view. The repository saw that the head had moved and
-   raised `ConflictError`, listing what landed: the designer's message and the two paths it
-   changed. The agent refreshed instead of overwriting.
+   raised `ConflictError`, listing what landed: the retime's short ID, its time and the two
+   paths it changed. The agent refreshed instead of overwriting.
 4. The agent edited the form, not the dots: `edit` set the stored arc's radius to 16, `place()`
    stood the arc members on the new slots, and `FormOp` stored the edited form.
    `validate_show` confirmed the structure before saving.
 5. `save_show` wrote only the documents that differ from the head: set 3's placements and its
    forms, 2 paths. The agent's revision landed on top of the designer's retime, so set 3
    keeps its 24 counts.
-6. `changelog` shows the three revisions, oldest first.
+6. `changelog(agent, first.id)` lists the two revisions after the first, oldest first, with
+   their times and paths. A revision holds only its ID, parent, time and changed paths: who
+   saved it and why is the host's record, here the `authors` dictionary keyed by revision ID.
+   The host also decides who may write, and builds undo on `revert(ws, revision_id, at)`,
+   which saves an earlier revision's documents as a new head.
 
 ## Step 10: export frames, video, data and printouts
 
@@ -271,7 +276,10 @@ What happened, in order:
 
 {{output: t11_publish}}
 
-The publication is a value. Each claim returned a new publication with the claim locked. A
+The publication is a value. `publish` took a join token and kept only its SHA-256, so
+`pub.link` carries no token: `join_link(pub, token)` builds the link performers open, and a
+guessed token does not verify. The host keeps the token, and its own roster keeps performers'
+contacts; claims never hold them. Each claim returned a new publication with the claim locked. A
 crew member could not claim a performer spot (`ValidationError`). The designer swapped Ada and
 Bo. Republishing after a retime carried both claims over, because their spots still exist and
 are still claimable by their roles, and `notify_changes` listed whose part changed.
@@ -280,7 +288,7 @@ are still claimable by their roles, and `notify_changes` listed whose part chang
 >>> from pathlib import Path
 >>> sketch.image(
 ...     (Path("figures") / "tutorial_qr.png").read_bytes(),
-...     caption="The publication's QR code, written by qr_code() in step 11.",
+...     caption="The QR code of the join link, written by qr_code(pub, token) in step 11.",
 ... )
 ```
 
@@ -300,4 +308,4 @@ global count at which T8 starts moving and the count at which it arrives.
 **Exercise 15.3 (harder).** Change the opening stagger of the tutorial so it runs from the
 **center outward** (T4 and T5 first, then T3 and T6, ...; one count per pair) and return the
 new tightest gap in transition 1→2. The check requires it to be larger than the original
--0.467 m.
+-0.463 m.

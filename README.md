@@ -1,10 +1,10 @@
 # ShowPy study guide
 
-A 190-page study guide to ShowPy, the Python choreography library (import name `showpy`). It teaches every package from first principles, with runnable snippets, an end-to-end tutorial, 65 graded exercises and a capstone project. One command rebuilds it into `showpy-guide.pdf`.
+A 192-page study guide to ShowPy, the Python choreography library (import name `showpy`). It teaches every package from first principles, with runnable snippets, an end-to-end tutorial, 65 graded exercises and a capstone project. One command rebuilds it into `showpy-guide.pdf`.
 
 ## Why
 
-Documentation drifts the moment the code moves. This guide cannot: the build runs every one of its 104 snippets, 11 tutorial files and 65 exercise checks against the pinned ShowPy, and fails if any printed output differs from the text. `uv run pytest` runs the same checks (163 tests, about 70 s on a laptop) without printing the PDF.
+Documentation drifts the moment the code moves. This guide cannot: the build runs every one of its 105 snippets, 11 tutorial files and 65 exercise checks against the pinned ShowPy, and fails if any printed output differs from the text. `uv run pytest` runs the same checks (163 tests, about 70 s on a laptop) without printing the PDF.
 
 ## Features
 

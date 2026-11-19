@@ -9,7 +9,7 @@ Contains:
 
 from showpy.cast.models import Group
 from showpy.cast.spots import add_group, add_spots_along
-from showpy.choreo.form_place import filled_forms, place
+from showpy.choreo.form_place import place
 from showpy.choreo.forms import arc_form, block_form, circle_form, slots
 from showpy.choreo.match import match
 from showpy.choreo.match_ops import with_set
@@ -32,9 +32,8 @@ def _place_matched(show: Show, set_id: str, form: Form) -> Show:
     result = match(show.set(prev), slots(form), list(IDS))
     members = tuple(sorted(result.assignment, key=result.assignment.__getitem__))
     form = form.model_copy(update={"members": members})
-    placed = place(show, set_id, [form])
-    show = with_set(show, placed)
-    return apply_change(show, [FormOp(form=f) for f in filled_forms(placed, [form])])
+    placed, filled = place(show, set_id, [form])
+    return apply_change(with_set(show, placed), [FormOp(form=f) for f in filled])
 
 
 def build_show() -> Show:

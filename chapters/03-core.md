@@ -104,14 +104,18 @@ True
 >>> Box2(min=(0, 0), max=(1, 1), color="red")
 Traceback (most recent call last):
   ...
-pydantic_core._pydantic_core.ValidationError: 1 validation error for Box2
-color
-  Extra inputs are not permitted [type=extra_forbidden, input_value='red', input_type=str]
-    For further information visit https://errors.pydantic.dev/2.14/v/extra_forbidden
+showpy.core.errors.SchemaError: SCHEMA: Box2 rejects 1 field(s): color: Extra inputs are not permitted (hint: fix the fields named in context)
+>>> Box2(min=(0, 0), max=(float("nan"), 1))
+Traceback (most recent call last):
+  ...
+showpy.core.errors.SchemaError: SCHEMA: Box2 rejects 1 field(s): max.0: Input should be a finite number (hint: fix the fields named in context)
 ```
 
 The donut is a 6 × 6 square (36 m²) with a 2 × 2 hole (4 m²): 32 m². `extra="forbid"`
-rejected the unknown field `color` instead of silently storing it.
+rejected the unknown field `color` instead of silently storing it, and NaN is refused in every
+float field, as is infinity. Constructors and `model_validate` raise `SchemaError`, the
+library's own error, not Pydantic's `ValidationError`; `SchemaError` is not a `ValueError`, so
+catch it by name or as `ShowPyError`.
 
 ## units.py: the only conversion point
 
@@ -161,9 +165,11 @@ shape mismatch is unequal. Tests use it for every float comparison.
 with `x`/`y` into an `(N, 2)` float array. Functions that accept "anything point-like" call it
 first.
 
-**`content_hash(obj)`** returns a SHA-256 hex digest of canonical content: a model is dumped
-to JSON with sorted keys first, so equal content always hashes the same. Revisions, set
-scripts (`source_hash`) and assets use it.
+**`content_hash(obj, *, domain="showpy.content")`** returns a SHA-256 hex digest of canonical
+content: models are dumped, sets sorted and `-0.0` made `0.0`, then the value is hashed as RFC
+8785 canonical JSON under its domain tag. Equal content hashes the same on every machine and
+under every hash seed, and equal content in two domains (a revision and an asset, say) never
+collides. Revisions, set scripts (`source_hash`) and assets use it.
 
 **`chunk_counts(total, parts)`** splits counts into equal parts whose sum is exactly `total`.
 

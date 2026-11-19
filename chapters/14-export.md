@@ -13,9 +13,9 @@ notifications are returned, never sent.
 | `CoordinateSheet`   | one spot's part through the whole show (and the claimer's name)                                                                                                 |
 | `ChartRow`, `Chart` | every spot of one set, for the designer                                                                                                                         |
 | `TextTable`         | a titled table of display strings, shared by CSV, text and PDF output                                                                                           |
-| `Performer`         | `id`, `name`, `contact`, `role` (`performer` or `crew`)                                                                                                         |
+| `Performer`         | `id`, `name`, `contact` (never kept by a publication), `role` (`performer` or `crew`)                                                                           |
 | `Claim`             | `spot`, `performer`, `claimed_at`, `locked`                                                                                                                     |
-| `Publication`       | `id`, `show_id`, `revision`, `link`, `status` (`live`, `paused`, `closed`), `published_at`, `claims`                                                            |
+| `Publication`       | `id`, `show_id`, `revision`, `link` (no token), `status` (`live`, `paused`, `closed`), `published_at`, `claims`, `join_token_sha256`                            |
 | `PerformerView`     | what one performer sees: their spot's position text and counts in every set                                                                                     |
 
 The coordinate-sheet type is called `CoordinateSheet`, not `Sheet`, because `Sheet` already
@@ -119,9 +119,10 @@ registry, so the result never depends on call order across processes.
 
 | Function                                                                             | Does                                                                                                                                              |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `publish(show, publication_id, base_url, at, previous=None)`                         | a live publication of the show's revision; claims of `previous` carry over when the spot still exists and the performer's role can still claim it |
+| `publish(show, publication_id, base_url, at, previous=None, *, join_token=None)`     | a live publication of the show's revision; claims of `previous` carry over when the spot still exists and the performer's role can still claim it |
+| `join_link(pub, token)` / `verify_join_token(pub, token)`                            | the link performers open, `<link>?t=<token>`, once the token matches / whether it matches                                                         |
 | `unpublish(pub)` / `pause(pub)`                                                      | closes it (claims stay on record) / pauses claiming                                                                                               |
-| `qr_code(pub, size)`                                                                 | a PNG QR code of the link (segno), with whole-pixel modules and the standard quiet zone                                                           |
+| `qr_code(pub, token, size=512)`                                                      | a PNG QR code of the join link (segno), with whole-pixel modules and the standard quiet zone                                                      |
 | `claim_spot(pub, show, performer, spot, at)`                                         | one spot per performer, one performer per spot; the claim is locked                                                                               |
 | `claims(pub)`, `who_is_on(pub, spot)`, `unclaimed(pub, show)`                        | queries                                                                                                                                           |
 | `swap_claims(pub, a, b)`, `reassign(pub, spot, performer, at)`, `release(pub, spot)` | designer edits                                                                                                                                    |
@@ -130,11 +131,20 @@ registry, so the result never depends on call order across processes.
 
 A spot's `claimable` (`performer`, `crew`, `none`) must match the performer's `role`.
 
+The link is a secret: whoever holds it can claim a spot. The first `publish` takes a
+`join_token` (22 to 256 characters of `[A-Za-z0-9_-]`; draw it with
+`secrets.token_urlsafe(16)`), stores only its SHA-256, and builds `pub.link` without it. The
+host keeps the token and hands `join_link(pub, token)` to performers; a republish may omit the
+token to keep it, or pass a new one to rotate it. `base_url` must be https, with no query,
+fragment or credentials. Publications never keep contacts either: a `Claim` drops the
+performer's `contact`, and the host keeps contacts in its own roster keyed by `Performer.id`.
+
 ```pycon
 >>> from datetime import UTC, datetime
 >>> from showpy.export.models import Performer
 >>> from showpy.export.publish import (
 ...     claim_spot,
+...     join_link,
 ...     notify_changes,
 ...     pause,
 ...     performer_view,
@@ -144,11 +154,16 @@ A spot's `claimable` (`performer`, `crew`, `none`) must match the performer's `r
 ...     who_is_on,
 ... )
 >>> at = datetime(2026, 11, 12, 18, 0, tzinfo=UTC)
->>> pub = publish(show, "opener", "https://shows.example/p", at)
+>>> token = "guide-join-token-0123456789"
+>>> pub = publish(show, "opener", "https://shows.example/p", at, join_token=token)
+>>> join_link(pub, token)
+'https://shows.example/p/opener?t=guide-join-token-0123456789'
 >>> pub.link, pub.status, unclaimed(pub, show)
 ('https://shows.example/p/opener', 'live', ['T1', 'T2', 'T3', 'T4'])
->>> ada = Performer(id="ada", name="Ada")
+>>> ada = Performer(id="ada", name="Ada", contact="ada@example.org")
 >>> pub, claim = claim_spot(pub, show, ada, "T2", at)
+>>> claim.performer.contact is None
+True
 >>> claim.locked, who_is_on(pub, "T2").name, performer_view(pub, show, ada).sets[1]
 (True, 'Ada', ('2', '2.00 m right of center, 9.00 m upstage of front edge', 8.0))
 >>> claim_spot(pub, show, ada, "T3", at)
@@ -163,7 +178,7 @@ showpy.core.errors.LockedError: LOCKED: publication opener is paused (hint: clai
 >>> notify_changes(pub, show, with_targets({"T2": {"x": 3.0}}))
 [(Performer(id='ada', name='Ada', contact=None, role='performer'), 'moved in set 2')]
 >>> from guide_draw import sketch
->>> sketch.image(qr_code(pub, size=200), caption="qr_code(): the publication link as a PNG QR code.")
+>>> sketch.image(qr_code(pub, token, size=200), caption="qr_code(): the join link as a PNG QR code.")
 ```
 
 ## 2D video: video.py
@@ -233,8 +248,8 @@ seek is `1.25 + 4 = 5.25` s: the first frame (count 8) plays with the music that
 **Exercise 14.2.** Export `two_set_show()` frames as CSV at 2 samples per count and return
 the row for `T4` at count 4 as a list of strings.
 
-**Exercise 14.3.** Publish `two_set_show()`, let Ada claim T1 and Bo claim T2, swap them as
-the designer, and return `who_is_on` for T1 and T2 (names).
+**Exercise 14.3.** Publish `two_set_show()` with a join token, let Ada claim T1 and Bo claim
+T2, swap them as the designer, and return `who_is_on` for T1 and T2 (names).
 
 **Exercise 14.4 (harder).** For a timeline at 120 cpm with an audio track whose
 `sync_offset_s` is 1.25 and a 2-second hold at count 4, return the audio seek in seconds that

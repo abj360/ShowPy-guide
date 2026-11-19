@@ -185,42 +185,55 @@ space and time**, each within `tol` meters (default 0.02) of the true motion. Be
 such segments the closest approach is a quadratic with an exact minimum (see `avoid` below),
 so checks are exact to within `tol`.
 
-How `_stations` builds them:
+How `entity_segments` builds them:
 
-1. Start from the **edges**: 0, the counts, every time-map knot, and every easing break
-   (`easing_breaks` mapped into the window).
-2. For each interval `[lo, hi]`, evaluate the position at both ends and at seven probes, at
-   every eighth of the interval. Compare each probe with the straight line between the end
-   positions at the same time share.
-3. Accept the interval if every probe is within `tol / 2`; otherwise split it in half and
-   recurse, up to depth 20.
+1. Start from the **edges**: 0, the counts, and every place the motion may kink, mapped into
+   the window: time-map knots, curve breaks (polyline corners, spline knots, joins), easing
+   breaks, and for `steps` the middle of each step, where its smoothstep turns from convex to
+   concave.
+2. For each interval `[lo, hi]`, measure how far the motion strays from the straight line
+   between the end positions:
+   - On a curve whose curvature has a closed-form bound (lines, polylines, arcs, circles, and
+     trims or chains of them), the error is **bounded, not sampled**: the easing's largest
+     gap from its chord, scaled by the distance travelled, plus `κ·L²/8` for the bend of an
+     arc and the exact corner gap of a polyline. Accept within `tol`.
+   - On any other curve (spline, ellipse, Bézier, SVG, spiral, custom motion), probe nine
+     points at **jittered** shares, one in each ninth of the interval. The jitter is seeded
+     per spot and transition from a stable digest, so every run probes the same points.
+     Accept within `tol / 2`.
+3. Otherwise split the interval in half and recurse. Past depth 20 it raises `PathError`
+   `SEGMENT_BOUND` instead of returning a segment that breaks the bound.
 
-Why `tol / 2` and seven probes? A Hypothesis property test checks the error at nine points
-per segment, not only at the probes. With probes at ¼, ½ and ¾ and the full `tol`, it found a
-deviation of 0.0113 m against a 0.01 m tolerance (ADR 0002 addendum). Denser probes and a
-half-tolerance margin leave room for the error between probes.
+Why a bound and jitter? Probes at fixed shares can line up with a periodic motion exactly. An
+audit of the probe-only engine found a 4-cycle `weave` custom motion compiled to one segment
+1.0 m off its path. A closed-form bound cannot be fooled by any spacing, and jittered probes
+have no fixed spacing to line up with. A Hypothesis property test still checks every segment
+at nine points, not only where the engine probed.
 
 ### The aliasing bug, and why easing breaks exist
 
 Remember from chapter 11 that a `steps` easing equals linear time at the middle of each step.
 Take `steps` with 4 steps over an 8-count window. The steps' middles are at counts 1, 3, 5
-and 7, and the probes of the first interval `[0, 8]` are at counts 1, 2, ..., 7. At counts
-1, 3, 5, 7 the eased position equals the linear one exactly; at 2, 4, 6 (the step edges) it
-also does. **Every probe sat exactly on the straight line**, so the whole stepped move was
-accepted as one segment and the march-and-stop vanished. This is aliasing: the probe spacing
+and 7. An earlier engine started from the time knots only and probed every eighth of an
+interval, so the probes of `[0, 8]` were at counts 1, 2, ..., 7. At counts 1, 3, 5, 7 the eased
+position equals the linear one exactly; at 2, 4, 6 (the step edges) it also does. **Every
+probe sat exactly on the straight line**, so the whole stepped move was accepted as one
+segment and the march-and-stop vanished. This is aliasing: the probe spacing
 matched the period of the signal.
 
-The fix: split at the easing's breaks first. `easing_breaks(steps 4)` is `[0.25, 0.5, 0.75]`,
-so subdivision starts from the step edges, and inside each step the smoothstep is clearly
-curved. Figure 12.3 reproduces the bug by patching the breaks away.
+The fix has two parts. Subdivision starts from the easing's breaks: `easing_breaks(steps 4)` is
+`[0.25, 0.5, 0.75]`, and the engine adds the middle of each step, so inside each piece the
+smoothstep is purely convex or purely concave. And on a straight line the error is bounded in
+closed form, with no probes to alias. Figure 12.3 replays the old probe-only subdivision next
+to the current engine.
 
-![The y position of a 4-step move (grey) and its time-linear segments (red). Left: without easing breaks, every probe lands on the line and one segment hides all four steps. Right: with breaks, 40 segments follow the motion within 2 cm.](figures/fig_segments.png)
+![The y position of a 4-step move (grey) and its time-linear segments (red). Left: the old probe-only subdivision without easing breaks; every probe lands on the line and one segment hides all four steps. Right: the current engine; 24 segments follow the motion within 2 cm.](figures/fig_segments.png)
 
 ```pycon
 >>> steps = with_rows({"T1": PathRow(entity="T1", easing=Easing(kind="steps", strength=4.0))})
 >>> segs = PathEngine(steps).entity_segments("T1", ("1", "2"))
 >>> len(segs), segs[0].t0, segs[0].p0, round(segs[-1].t1, 6), segs[-1].p1
-(40, 0.0, (0.0, 5.0), 8.0, (0.0, 9.0))
+(24, 0.0, (0.0, 5.0), 8.0, (0.0, 9.0))
 >>> worst = 0.0
 >>> pe = PathEngine(steps)
 >>> for seg in segs:
@@ -241,16 +254,16 @@ motion the checker sees. It returns `SpeedStats`: `distance`, moving `counts`, `
 ```pycon
 >>> from showpy.choreo.motion_stats import direction_of_travel, energy_curve, motion_contrast, speeds
 >>> engine.speed("T1", ("1", "2"))
-SpeedStats(distance=7.990630784836994, counts=6.0, m_per_count=1.3317717974728323, m_per_s=2.6635435949456645, max_instant=2.441406249999943)
+SpeedStats(distance=7.999999999999998, counts=6.0, m_per_count=1.333333333333333, m_per_s=2.666666666666666, max_instant=2.385310363079827)
 >>> speeds(two_set_show(), ("1", "2"))[["entity", "distance", "m_per_count"]].head(2).to_string(
 ...     index=False
 ... )
 'entity  distance  m_per_count\n    T1       4.0          0.5\n    T2       4.0          0.5'
 ```
 
-The distance is 7.991 m, a hair under the 8 m polyline: the time-linear segments cut the
-corner at the waypoint, each within the 2 cm tolerance. The peak, 2.44 m per count, is in the
-middle of the second leg, where `ease_in_out` is fastest.
+The distance is the 8 m of the polyline, to rounding: the waypoint is a curve break, so a
+segment ends exactly on the corner instead of cutting it. The fastest segment, 2.39 m per
+count, is in the middle of the second leg, where `ease_in_out` is fastest.
 
 ## Measures over time: motion_stats.py
 
